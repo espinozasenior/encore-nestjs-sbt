@@ -11,6 +11,10 @@
       "node"
     ],
     "paths": {
+      "@app/*": ["./src/*"],
+      "@config/*": ["./config/*"],
+      "@libs/boat": ["./libs/boat/src"],
+      "@libs/boat/*": ["./libs/boat/src/*"],
       "~encore/*": [
         "./encore.gen/*"
       ]
@@ -30,5 +34,6 @@
     "skipLibCheck": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
-  }
+  },
+  "exclude": ["node_modules", "dist"]
 }
