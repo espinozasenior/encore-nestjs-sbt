@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { CatsService } from './cats/cats.service';
+import { CatsService } from './cats/cats.repository';
 import { CatsModule } from './cats/cats.module';
 
 // Mounting the application as bare Nest standalone application so that we can use

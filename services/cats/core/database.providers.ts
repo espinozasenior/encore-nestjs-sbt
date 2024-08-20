@@ -1,10 +1,10 @@
 import { SQLDatabase } from 'encore.dev/storage/sqldb';
 import knex from 'knex';
 
-// Define a database named 'appDB', using the database migrations
+// Define a database named 'cats', using the database migrations
 // in the "./migrations" folder. Encore automatically provisions,
 // migrates, and connects to the database.
-const DB = new SQLDatabase('appDB', {
+const DB = new SQLDatabase('cats', {
   migrations: './migrations',
 });
 
