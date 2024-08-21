@@ -1,22 +1,22 @@
-import { SQLDatabase } from 'encore.dev/storage/sqldb';
-import knex from 'knex';
+import { SQLDatabase } from "encore.dev/storage/sqldb";
+import knex from "knex";
 
-// Define a database named 'appDB', using the database migrations
+// Define a database named 'cats', using the database migrations
 // in the "./migrations" folder. Encore automatically provisions,
 // migrates, and connects to the database.
-const DB = new SQLDatabase('appDB', {
-  migrations: './migrations',
+const DB = new SQLDatabase("cats", {
+  migrations: "./migrations",
 });
 
 // Use Knex.js to connect to the database
 const ORM = knex({
-  client: 'pg',
+  client: "pg",
   connection: DB.connectionString,
 });
 
 export const databaseProviders = [
   {
-    provide: 'DATABASE_CONNECTION',
+    provide: "DATABASE_CONNECTION",
     useFactory: async () => ORM,
   },
 ];
