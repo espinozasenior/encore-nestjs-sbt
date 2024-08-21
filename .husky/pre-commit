@@ -1,1 +1,7 @@
-npx @biomejs/biome check --write ./services
+#!/bin/sh
+
+if grep 'ID=nixos' /etc/os-release >/dev/null; then
+    PATH="$(echo "$PATH" | sed -e 's@:node_modules/.bin@@g' -e 's@node_modules/.bin:@@g')" biome check --write ./services
+else
+    npx @biomejs/biome check --write ./services
+fi
