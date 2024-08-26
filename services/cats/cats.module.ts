@@ -1,10 +1,8 @@
 import { Module } from "@nestjs/common";
-import { catsProviders } from "./cats.providers";
-import { CatsService } from "./cats.repository";
-import { DatabaseModule } from "./core/database.module";
+import { CatsService } from "./cats.service";
 
 @Module({
-  imports: [DatabaseModule],
-  providers: [CatsService, ...catsProviders],
+  imports: [],
+  providers: [CatsService],
 })
 export class CatsModule {}

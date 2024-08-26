@@ -3,7 +3,7 @@ import { PeruConnectService } from "./peru-connect/peru-connect.service";
 import { PeruConnectModule } from "./peru-connect/peru-connect.module";
 import { AppModule } from "./app.module";
 import { CatsModule } from "./cats/cats.module";
-import { CatsService } from "./cats/cats.repository";
+import { CatsService } from "./cats/cats.service";
 
 // Mounting the application as bare Nest standalone application so that we can use
 // the Nest services inside our Encore endpoints
