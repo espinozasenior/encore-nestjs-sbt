@@ -1,4 +1,4 @@
-export interface LegalRepresentativesDto {
+export interface LegalRepresentativeDto {
   document: {
     type: string;
     number: string;

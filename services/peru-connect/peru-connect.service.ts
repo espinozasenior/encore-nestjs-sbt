@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import parseHtml from "node-html-parser";
+import { parse as parseHtml } from "node-html-parser";
 import axios from "axios";
 
-import type { LegalRepresentativesDto } from "./dtos/legal-representatives.dto";
+import type { LegalRepresentativeDto } from "./dtos/legal-representatives.dto";
 import type { RucDto } from "./dtos/ruc.dto";
 import type { DniDto } from "./dtos/dni.dto";
 
@@ -63,47 +63,38 @@ export class PeruConnectService {
   }
 
   async searchLegalRepresentsByRUC(
-    _ruc: string,
-  ): Promise<LegalRepresentativesDto[] | null> {
+    ruc: string,
+  ): Promise<Array<LegalRepresentativeDto>> {
     const params = new URLSearchParams();
 
     params.append("accion", "getRepLeg");
-    params.append("contexto", "ti-it");
-    params.append("modo", "1");
-    params.append(
-      "desRuc",
-      "INVERSIONES.IO+PERU+SOCIEDAD+ADMINISTRADORA+DE+PLATAFORMA+DE+FINANCIAMIENTO+PARTICIPATIVO+FINANCIER",
-    );
-    params.append("nroRuc", "20605667351");
+    params.append("nroRuc", ruc);
+    params.append("desRuc", "");
 
     const { data } = await axios.post(
       "https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/jcrS00Alias",
       params,
     );
 
-    const document = parseHtml(data);
-    const docTable = document.querySelector(".panel .table");
-
     const sanitize = (s: string): string =>
       s.replace(/^[\\r\\n\s]+/, "").replace(/[\\r\\n\s]+$/, "");
 
-    const results: LegalRepresentativesDto[] = [];
+    const document = parseHtml(data);
+    const tds = document.querySelectorAll(".panel .table td");
+    const results: Array<LegalRepresentativeDto> = [];
 
-    if (docTable) {
-      const tds = docTable.querySelectorAll("td");
+    for (let i = 0; i < tds.length; i += 5) {
+      const type = sanitize(tds[i].innerText);
+      const number = sanitize(tds[i + 1].innerText);
+      const names = sanitize(tds[i + 2].innerText);
+      const role = sanitize(tds[i + 3].innerText);
+      const since = sanitize(tds[i + 4].innerText);
 
-      tds.forEach((_, index) => {
-        if (index !== 0 && index % 4 === 0) {
-          results.push({
-            document: {
-              type: sanitize(tds[index - 4].innerText),
-              number: sanitize(tds[index - 3].innerText),
-            },
-            names: sanitize(tds[index - 2].innerText),
-            role: sanitize(tds[index - 1].innerText),
-            since: sanitize(tds[index].innerText),
-          });
-        }
+      results.push({
+        document: { type, number },
+        names,
+        role,
+        since,
       });
     }
 
