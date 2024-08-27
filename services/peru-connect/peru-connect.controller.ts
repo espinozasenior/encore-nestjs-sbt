@@ -7,6 +7,12 @@ import type { RucDto } from "./dtos/ruc.dto";
 export const searchByDNI = api(
   { expose: true, method: "GET", path: "/peru-connect/search-by-dni/:dni" },
   async ({ dni }: { dni: string }): Promise<DniDto> => {
+    if (!dni) throw APIError.invalidArgument("dni is required");
+    if (dni.length !== 9)
+      throw APIError.invalidArgument("dni must have 9 digits");
+    if (Number.isNaN(Number.parseInt(dni)))
+      throw APIError.invalidArgument("dni must be contain only digits");
+
     const { peruConnectService } = await applicationContext;
 
     const result = await peruConnectService.searchByDNI(dni);
