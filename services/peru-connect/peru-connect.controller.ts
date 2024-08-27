@@ -21,6 +21,14 @@ export const searchByDNI = api(
 export const searchByRUC = api(
   { expose: true, method: "GET", path: "/peru-connect/search-by-ruc/:ruc" },
   async ({ ruc }: { ruc: string }): Promise<RucDto> => {
+    if (!ruc) throw APIError.invalidArgument("ruc is required");
+    if (ruc.length !== 11)
+      throw APIError.invalidArgument("ruc must have 11 digits");
+    if (Number.isNaN(Number.parseInt(ruc)))
+      throw APIError.invalidArgument("ruc must be contain only digits");
+    if (ruc[0] !== "1" && ruc[0] !== "2")
+      throw APIError.invalidArgument("ruc must start with 1 or 2");
+
     const { peruConnectService } = await applicationContext;
 
     const result = await peruConnectService.searchByRUC(ruc);
