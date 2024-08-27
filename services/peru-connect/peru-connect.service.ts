@@ -41,14 +41,24 @@ export class PeruConnectService {
   }
 
   async searchByRUC(ruc: string): Promise<RucDto | null> {
-    const results = await this.searchEntities<RucDto>([
-      {
-        type: "RUC",
-        number: ruc,
-      },
+    const [results, representatives] = await Promise.all([
+      this.searchEntities<RucDto>([
+        {
+          type: "RUC",
+          number: ruc,
+        },
+      ]),
+      this.searchLegalRepresentsByRUC(ruc),
     ]);
 
-    return results.find((result) => result.ruc === ruc) ?? null;
+    const result = results.find((result) => result.ruc === ruc);
+    if (!result) return null;
+
+    if (representatives) {
+      result.representatives = representatives;
+    }
+
+    return result;
   }
 
   async searchByDNI(dni: string): Promise<DniDto | null> {
@@ -64,7 +74,7 @@ export class PeruConnectService {
 
   async searchLegalRepresentsByRUC(
     ruc: string,
-  ): Promise<Array<LegalRepresentativeDto>> {
+  ): Promise<Array<LegalRepresentativeDto> | null> {
     const params = new URLSearchParams();
 
     params.append("accion", "getRepLeg");
@@ -77,11 +87,16 @@ export class PeruConnectService {
     );
 
     const sanitize = (s: string): string =>
-      s.replace(/^[\\r\\n\s]+/, "").replace(/[\\r\\n\s]+$/, "");
+      s
+        .replace(/^[\\r\\n\s]+/, "")
+        .replace(/[\\r\\n\s]+$/, "")
+        .replace("  ", " ");
 
     const document = parseHtml(data);
     const tds = document.querySelectorAll(".panel .table td");
     const results: Array<LegalRepresentativeDto> = [];
+
+    if (tds.length === 0) return null;
 
     for (let i = 0; i < tds.length; i += 5) {
       const type = sanitize(tds[i].innerText);
