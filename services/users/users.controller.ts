@@ -34,7 +34,7 @@ export const createUser = api(
     acceptTermsAndPrivacyPolicy: boolean;
     acknowledgesLegalRepresentation: boolean;
   }): Promise<Response> => {
-    const { usersService } = await applicationContext;
+    const { usersService, authService } = await applicationContext;
     const authenticatedUser = mustGetAuthData();
 
     const clerkId = authenticatedUser.userID;
@@ -65,6 +65,8 @@ export const createUser = api(
       acknowledgesLegalRepresentation,
       acceptTermsAndPrivacyPolicy,
     });
+
+    await authService.saveInternalUserIdInPublicMetadata(user.clerkId, user.id);
 
     return { user: toSerializableUser(user) };
   },
