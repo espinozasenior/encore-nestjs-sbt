@@ -1,9 +1,18 @@
 import { api, APIError } from "encore.dev/api";
 
+import type { ISunatProfileResponse } from "./dtos/sunat-profile-response.dto";
+import { toSerializableSunatProfile } from "./helpers/serializable";
+import { QOMPA_INTERNAL_USER_ID_KEY } from "../auth/auth";
 import applicationContext from "../applicationContext";
-import type { DniDto } from "./dtos/dni.dto";
-import type { RucDto } from "./dtos/ruc.dto";
+import {
+  checkSaveSunatProfileDto,
+  type ISaveSunatProfileDto,
+} from "./dtos/save-sunat-profile.dto";
+import type { DniDto } from "./interfaces/dni.dto";
+import type { RucDto } from "./interfaces/ruc.dto";
 import { checkRuc } from "@/lib/peru-connect";
+import { mustGetAuthData } from "@/lib/clerk";
+import log from "encore.dev/log";
 
 export const searchByDNI = api(
   { expose: true, method: "GET", path: "/peru-connect/search-by-dni/:dni" },
@@ -39,5 +48,41 @@ export const searchByRUC = api(
     }
 
     return result;
+  },
+);
+
+export const saveSunatProfile = api(
+  {
+    expose: true,
+    auth: true,
+    method: "POST",
+    path: "/peru-connect/sunat-profile",
+  },
+  async (payload: ISaveSunatProfileDto): Promise<ISunatProfileResponse> => {
+    const apiError = checkSaveSunatProfileDto(payload);
+    if (apiError) throw apiError;
+
+    const { peruConnectService } = await applicationContext;
+
+    const authenticatedUser = mustGetAuthData();
+    const clerkId = authenticatedUser.userID;
+
+    log.debug(
+      `user identified with clerk id '${clerkId}' wants to save its sunat profile`,
+    );
+
+    const userId = authenticatedUser.metadata.publicMetadata[
+      QOMPA_INTERNAL_USER_ID_KEY
+    ] as number;
+
+    log.debug(
+      `qompa internal user id is '${userId}'...(clerk id was '${clerkId}')`,
+    );
+
+    const profile = await peruConnectService.saveSunatProfile(userId, payload);
+
+    return {
+      sunatProfile: toSerializableSunatProfile(profile),
+    };
   },
 );
