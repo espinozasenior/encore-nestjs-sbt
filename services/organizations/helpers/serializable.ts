@@ -1,4 +1,4 @@
-import type { organizations as OrganizationModel } from "@prisma/client";
+import type { Organization as OrganizationModel } from "@prisma/client";
 
 import type { SerializableOrganization } from "../interfaces/organization.dto";
 
