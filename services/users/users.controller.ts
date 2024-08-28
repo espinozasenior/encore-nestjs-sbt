@@ -71,3 +71,20 @@ export const createUser = api(
     return { user: toSerializableUser(user) };
   },
 );
+
+export const existsById = api(
+  { expose: false },
+  async ({
+    id,
+  }: { id: number }): Promise<{
+    userExists: boolean;
+  }> => {
+    const { usersService } = await applicationContext;
+
+    const userExists = await usersService.existsById(id);
+
+    return {
+      userExists,
+    };
+  },
+);
