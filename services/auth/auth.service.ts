@@ -10,6 +10,8 @@ import { PrismaClient } from "@prisma/client";
 import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
+import { QOMPA_INTERNAL_USER_ID_KEY } from "./auth";
+
 @Injectable()
 export class AuthService extends PrismaClient implements OnModuleInit {
   clerkClient: ClerkClient;
@@ -54,5 +56,38 @@ export class AuthService extends PrismaClient implements OnModuleInit {
 
   async getUser(userId: string): Promise<User> {
     return await this.clerkClient.users.getUser(userId);
+  }
+
+  async saveInternalUserIdInPublicMetadata(
+    userId: string,
+    qompaInternalUserId: number,
+  ): Promise<void> {
+    await this.savePublicMetadata(userId, {
+      [QOMPA_INTERNAL_USER_ID_KEY]: qompaInternalUserId,
+    });
+  }
+
+  /*
+    Updates the public metadata of the user preserving the existing ones.
+
+    If the user parameter is not provided it will fetch the user from the Clerk API.
+  */
+  async savePublicMetadata(
+    userId: string,
+    metadata: UserPublicMetadata,
+    clerkUser?: User,
+  ): Promise<User> {
+    let user = clerkUser;
+
+    if (!user) {
+      user = await this.clerkClient.users.getUser(userId);
+    }
+
+    return await this.clerkClient.users.updateUserMetadata(user.id, {
+      publicMetadata: {
+        ...user.publicMetadata,
+        ...metadata,
+      },
+    });
   }
 }

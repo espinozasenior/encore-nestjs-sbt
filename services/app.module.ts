@@ -4,11 +4,13 @@ import { PeruConnectModule } from "./peru-connect/peru-connect.module";
 import { UsersModule } from "./users/users.module";
 import { CatsModule } from "./cats/cats.module";
 import { AuthModule } from "./auth/auth.module";
+import { SecurityModule } from "./security/security.module";
 
 @Module({
   imports: [
     OrganizationsModule,
     PeruConnectModule,
+    SecurityModule,
     UsersModule,
     CatsModule,
     AuthModule,

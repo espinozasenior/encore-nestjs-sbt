@@ -1,10 +1,18 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { parse as parseHtml } from "node-html-parser";
+import { PrismaClient, type SunatProfile } from "@prisma/client";
+import { APIError } from "encore.dev/api";
+import log from "encore.dev/log";
 import axios from "axios";
 
-import type { LegalRepresentativeDto } from "./dtos/legal-representatives.dto";
-import type { RucDto } from "./dtos/ruc.dto";
-import type { DniDto } from "./dtos/dni.dto";
+import type { LegalRepresentativeDto } from "./interfaces/legal-representatives.dto";
+import {
+  type ISaveSunatProfileDto,
+  checkSaveSunatProfileDto,
+} from "./dtos/save-sunat-profile.dto";
+import applicationContext from "../applicationContext";
+import type { RucDto } from "./interfaces/ruc.dto";
+import type { DniDto } from "./interfaces/dni.dto";
 
 interface EntitySearchParam {
   type: "RUC" | "DNI";
@@ -12,32 +20,63 @@ interface EntitySearchParam {
 }
 
 @Injectable()
-export class PeruConnectService {
-  private async searchEntities<T>(
-    documents: EntitySearchParam[],
-  ): Promise<T[]> {
-    if (documents.length === 0) return [];
+export class PeruConnectService extends PrismaClient implements OnModuleInit {
+  private sunatEncryptionKey: string;
 
-    const response = await fetch(process.env.APIPERU_URL, {
-      method: "POST",
-      headers: {
-        "X-Api-Key": process.env.APIPERU_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        documents,
-      }),
-    });
+  async onModuleInit() {
+    await this.$connect();
+  }
 
-    if (!response.ok) {
-      throw new Error(
-        `failed to search entities(${documents}), response status: ${response.statusText}`,
+  constructor() {
+    super();
+
+    this.sunatEncryptionKey = process.env.INTERNAL_SUNAT_ENCRYPTION_KEY;
+  }
+
+  async saveSunatProfile(
+    userOwnerId: number,
+    { account, solKey }: ISaveSunatProfileDto,
+  ): Promise<SunatProfile> {
+    const apiError = checkSaveSunatProfileDto({ account, solKey });
+    if (apiError) throw apiError;
+
+    const { usersService, securityService } = await applicationContext;
+
+    const userExists = await usersService.existsById(userOwnerId);
+    if (!userExists) {
+      log.error(
+        `user with id '${userOwnerId}' not found but it tried to save its sunat profile`,
       );
+      throw APIError.notFound("user not found");
     }
 
-    const results = await response.json();
+    const sunatProfileExists =
+      await this.sunatProfileExistsByUserId(userOwnerId);
+    if (sunatProfileExists) {
+      log.warn(
+        `user with id '${userOwnerId}' already has a sunat profile but it tried to save its sunat profile`,
+      );
+      throw APIError.alreadyExists("user already has a sunat profile");
+    }
 
-    return results as T[];
+    const encryptedSolKey = securityService.encryptAES256(
+      solKey,
+      this.sunatEncryptionKey,
+    );
+
+    const profile = await this.sunatProfile.create({
+      data: {
+        userId: userOwnerId,
+        account,
+        encryptedSolKey,
+      },
+    });
+
+    return profile;
+  }
+
+  async sunatProfileExistsByUserId(userId: number): Promise<boolean> {
+    return (await this.sunatProfile.count({ where: { userId } })) > 0;
   }
 
   async searchByRUC(ruc: string): Promise<RucDto | null> {
@@ -72,7 +111,34 @@ export class PeruConnectService {
     return results.find((result) => result.dni === dni) ?? null;
   }
 
-  async searchLegalRepresentsByRUC(
+  private async searchEntities<T>(
+    documents: EntitySearchParam[],
+  ): Promise<T[]> {
+    if (documents.length === 0) return [];
+
+    const response = await fetch(process.env.APIPERU_URL, {
+      method: "POST",
+      headers: {
+        "X-Api-Key": process.env.APIPERU_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        documents,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `failed to search entities(${documents}), response status: ${response.statusText}`,
+      );
+    }
+
+    const results = await response.json();
+
+    return results as T[];
+  }
+
+  private async searchLegalRepresentsByRUC(
     ruc: string,
   ): Promise<Array<LegalRepresentativeDto> | null> {
     const params = new URLSearchParams();
