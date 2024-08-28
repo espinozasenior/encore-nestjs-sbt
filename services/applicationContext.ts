@@ -20,7 +20,6 @@ const applicationContext = NestFactory.createApplicationContext(AppModule).then(
       peruConnectService: app
         .select(PeruConnectModule)
         .get(PeruConnectService, { strict: true }),
-      // catsService: app.select(CatsModule).get(CatsService, { strict: true }),
       usersService: app.select(UsersModule).get(UsersService, {
         strict: true,
       }),

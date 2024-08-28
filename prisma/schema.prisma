@@ -8,13 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model cats {
-  id    Int    @id @default(autoincrement())
-  name  String
-  age   Int
-  breed String
-}
-
 model User {
   id                              Int           @id @default(autoincrement())
   clerkId                         String        @unique @map("clerk_id")
