@@ -1,3 +1,5 @@
+import type { LegalRepresentativeDto } from "./legal-representatives.dto";
+
 export interface RucDto {
   ruc: string;
   names: string;
@@ -12,5 +14,7 @@ export interface RucDto {
   condition: string;
   isARetentionAgent: string;
   isAGoodTaxPayer: string;
-  attachments: never[];
+  // biome-ignore lint/suspicious/noExplicitAny: not able to introspect the type
+  attachments: any[];
+  representatives?: LegalRepresentativeDto[];
 }
