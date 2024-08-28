@@ -44,13 +44,6 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     const data: Prisma.UserUpdateInput = {};
 
     if (input.onboardedAt !== undefined && input.onboardedAt !== null) {
-      console.log(
-        "onboardedAt",
-        input.onboardedAt,
-        "typeof input.onboardedAt",
-        typeof input.onboardedAt,
-      );
-
       data.onboardedAt = input.onboardedAt;
     }
 
@@ -70,6 +63,10 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       throw new Error("User not found");
     }
     return result.id;
+  }
+
+  async existsById(userId: number): Promise<boolean> {
+    return (await this.user.count({ where: { id: userId } })) > 0;
   }
 
   async existsByClerkId(clerkId: string): Promise<boolean> {
