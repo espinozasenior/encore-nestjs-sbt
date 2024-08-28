@@ -4,6 +4,8 @@ import { OrganizationsService } from "./organizations/organizations.service";
 import { OrganizationsModule } from "./organizations/organizations.module";
 import { PeruConnectService } from "./peru-connect/peru-connect.service";
 import { PeruConnectModule } from "./peru-connect/peru-connect.module";
+import { SecurityService } from "./security/security.service";
+import { SecurityModule } from "./security/security.module";
 import { UsersService } from "./users/users.service";
 import { UsersModule } from "./users/users.module";
 import { AuthService } from "./auth/auth.service";
@@ -29,6 +31,9 @@ const applicationContext = NestFactory.createApplicationContext(AppModule).then(
       paymentsService: app
         .select(UsersModule)
         .get(UsersService, { strict: true }),
+      securityService: app.select(SecurityModule).get(SecurityService, {
+        strict: true,
+      }),
     };
   },
 );
