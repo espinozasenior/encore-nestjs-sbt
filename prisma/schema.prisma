@@ -38,11 +38,11 @@ model Organization {
 }
 
 model SunatProfile {
-  id      Int    @id @default(autoincrement())
-  userId  Int    @unique @map("user_id")
-  account String @unique
-  solKey  String @map("sol_key")
-  user    User   @relation(fields: [userId], references: [id])
+  id              Int    @id @default(autoincrement())
+  userId          Int    @unique @map("user_id")
+  account         String @unique
+  encryptedSolKey String @map("encrypted_sol_key")
+  user            User   @relation(fields: [userId], references: [id])
 
   @@map("sunat_profiles")
 }
