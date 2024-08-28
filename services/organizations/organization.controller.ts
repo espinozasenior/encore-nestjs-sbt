@@ -1,6 +1,6 @@
 import { api, APIError } from "encore.dev/api";
 
-import type { SerializableOrganization } from "./interfaces/organization.dto";
+import type { SerializableOrganization } from "./interfaces/serializable-organization.interface";
 import {
   checkCreateOrganizationDto,
   type ICreateOrganizationDto,

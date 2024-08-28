@@ -1,6 +1,6 @@
 import type { Organization as OrganizationModel } from "@prisma/client";
 
-import type { SerializableOrganization } from "../interfaces/organization.dto";
+import type { SerializableOrganization } from "../interfaces/serializable-organization.interface";
 
 export const toSerializableOrganization = (
   organization: OrganizationModel,

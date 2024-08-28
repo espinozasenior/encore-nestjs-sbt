@@ -2,7 +2,7 @@ import { api, APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import applicationContext from "@/services/applicationContext";
-import type { SerializableUser } from "./interfaces/user.dto";
+import type { SerializableUser } from "./interfaces/serializable-user.interface";
 import { toSerializableUser } from "./helpers/serializable";
 import { mustGetAuthData } from "@/lib/clerk";
 

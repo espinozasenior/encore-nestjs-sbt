@@ -1,4 +1,4 @@
-import type { LegalRepresentativeDto } from "./legal-representatives.dto";
+import type { LegalRepresentativeDto } from "./legal-representative.interface";
 
 export interface RucDto {
   ruc: string;

@@ -1,4 +1,4 @@
-import type { SerializableSunatProfile } from "../interfaces/sunat-profile.dto";
+import type { SerializableSunatProfile } from "../interfaces/serializable-sunat-profile.interface";
 
 export interface ISunatProfileResponse {
   sunatProfile: SerializableSunatProfile;
