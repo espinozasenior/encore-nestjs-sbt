@@ -1,4 +1,5 @@
 import { api, APIError } from "encore.dev/api";
+import log from "encore.dev/log";
 
 import type { ISunatProfileResponse } from "./dtos/sunat-profile-response.dto";
 import { toSerializableSunatProfile } from "./helpers/serializable";
@@ -8,11 +9,10 @@ import {
   checkSaveSunatProfileDto,
   type ISaveSunatProfileDto,
 } from "./dtos/save-sunat-profile.dto";
-import type { DniDto } from "./interfaces/dni.dto";
-import type { RucDto } from "./interfaces/ruc.dto";
+import type { DniDto } from "./interfaces/dni.interface";
+import type { RucDto } from "./interfaces/ruc.interface";
 import { checkRuc } from "@/lib/peru-connect";
 import { mustGetAuthData } from "@/lib/clerk";
-import log from "encore.dev/log";
 
 export const searchByDNI = api(
   { expose: true, method: "GET", path: "/peru-connect/search-by-dni/:dni" },

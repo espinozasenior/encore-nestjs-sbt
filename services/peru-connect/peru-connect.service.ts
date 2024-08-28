@@ -5,14 +5,14 @@ import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 import axios from "axios";
 
-import type { LegalRepresentativeDto } from "./interfaces/legal-representatives.dto";
+import type { LegalRepresentativeDto } from "./interfaces/legal-representative.interface";
 import {
   type ISaveSunatProfileDto,
   checkSaveSunatProfileDto,
 } from "./dtos/save-sunat-profile.dto";
 import applicationContext from "../applicationContext";
-import type { RucDto } from "./interfaces/ruc.dto";
-import type { DniDto } from "./interfaces/dni.dto";
+import type { RucDto } from "./interfaces/ruc.interface";
+import type { DniDto } from "./interfaces/dni.interface";
 
 interface EntitySearchParam {
   type: "RUC" | "DNI";

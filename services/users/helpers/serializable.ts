@@ -1,6 +1,6 @@
 import type { users as UserModel } from "@prisma/client";
 
-import type { SerializableUser } from "../interfaces/user.dto";
+import type { SerializableUser } from "../interfaces/serializable-user.interface";
 
 export const toSerializableUser = (user: UserModel): SerializableUser => {
   return {
