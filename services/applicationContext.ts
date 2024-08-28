@@ -1,4 +1,7 @@
 import { NestFactory } from "@nestjs/core";
+
+import { OrganizationsService } from "./organizations/organizations.service";
+import { OrganizationsModule } from "./organizations/organizations.module";
 import { PeruConnectService } from "./peru-connect/peru-connect.service";
 import { PeruConnectModule } from "./peru-connect/peru-connect.module";
 import { AppModule } from "./app.module";
@@ -14,6 +17,9 @@ const applicationContext = NestFactory.createApplicationContext(AppModule).then(
       peruConnectService: app
         .select(PeruConnectModule)
         .get(PeruConnectService, { strict: true }),
+      organizationsService: app
+        .select(OrganizationsModule)
+        .get(OrganizationsService),
     };
   },
 );
