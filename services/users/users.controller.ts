@@ -1,4 +1,5 @@
 import { api, APIError } from "encore.dev/api";
+import { auth } from "~encore/clients";
 import log from "encore.dev/log";
 
 import applicationContext from "@/services/applicationContext";
@@ -34,7 +35,7 @@ export const createUser = api(
     acceptTermsAndPrivacyPolicy: boolean;
     acknowledgesLegalRepresentation: boolean;
   }): Promise<Response> => {
-    const { usersService, authService } = await applicationContext;
+    const { usersService } = await applicationContext;
     const authenticatedUser = mustGetAuthData();
 
     const clerkId = authenticatedUser.userID;
@@ -66,7 +67,7 @@ export const createUser = api(
       acceptTermsAndPrivacyPolicy,
     });
 
-    await authService.saveInternalUserIdInPublicMetadata(user.clerkId, user.id);
+    await auth.saveInternalUserIdInPublicMetadata({ clerkId, userId: user.id });
 
     return { user: toSerializableUser(user) };
   },
