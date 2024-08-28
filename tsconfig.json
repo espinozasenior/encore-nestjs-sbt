@@ -10,9 +10,13 @@
     "types": [
       "node"
     ],
+    "baseUrl": ".",
     "paths": {
       "~encore/*": [
         "./encore.gen/*"
+      ],
+      "@/*": [
+        "./*"
       ]
     },
     /* Workspace Settings */
