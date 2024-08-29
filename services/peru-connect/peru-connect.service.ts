@@ -2,6 +2,7 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { parse as parseHtml } from "node-html-parser";
 import { PrismaClient, type SunatProfile } from "@prisma/client";
 import { APIError } from "encore.dev/api";
+import { users } from "~encore/clients";
 import log from "encore.dev/log";
 import axios from "axios";
 
@@ -40,9 +41,11 @@ export class PeruConnectService extends PrismaClient implements OnModuleInit {
     const apiError = checkSaveSunatProfileDto({ account, solKey });
     if (apiError) throw apiError;
 
-    const { usersService, securityService } = await applicationContext;
+    const { securityService } = await applicationContext;
 
-    const userExists = await usersService.existsById(userOwnerId);
+    const { userExists } = await users.existsById({
+      id: userOwnerId,
+    });
     if (!userExists) {
       log.error(
         `user with id '${userOwnerId}' not found but it tried to save its sunat profile`,
