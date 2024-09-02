@@ -1,4 +1,4 @@
-export interface DniDto {
+export interface IDNI {
   dni: string;
   names: string;
   department: string;

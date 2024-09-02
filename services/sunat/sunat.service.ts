@@ -12,8 +12,8 @@ import {
   checkSaveSunatProfileDto,
 } from "./dtos/save-sunat-profile.dto";
 import applicationContext from "../applicationContext";
-import type { RucDto } from "./interfaces/ruc.interface";
-import type { DniDto } from "./interfaces/dni.interface";
+import type { IRUC } from "./interfaces/ruc.interface";
+import type { IDNI } from "./interfaces/dni.interface";
 import type { IRubro } from "./interfaces/rubro.interface";
 
 interface EntitySearchParam {
@@ -132,9 +132,9 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     return (await this.sunatProfile.count({ where: { userId } })) > 0;
   }
 
-  async searchByRUC(ruc: string): Promise<RucDto | null> {
+  async searchByRUC(ruc: string): Promise<IRUC | null> {
     const [results, representatives] = await Promise.all([
-      this.searchEntities<RucDto>([
+      this.searchEntities<IRUC>([
         {
           type: "RUC",
           number: ruc,
@@ -153,8 +153,8 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     return result;
   }
 
-  async searchByDNI(dni: string): Promise<DniDto | null> {
-    const results = await this.searchEntities<DniDto>([
+  async searchByDNI(dni: string): Promise<IDNI | null> {
+    const results = await this.searchEntities<IDNI>([
       {
         type: "DNI",
         number: dni,
