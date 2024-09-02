@@ -9,10 +9,12 @@ import {
   checkSaveSunatProfileDto,
   type ISaveSunatProfileDto,
 } from "./dtos/save-sunat-profile.dto";
+import type { IRubro } from "./interfaces/rubro.interface";
 import type { DniDto } from "./interfaces/dni.interface";
 import type { RucDto } from "./interfaces/ruc.interface";
 import { checkRuc } from "@/lib/sunat";
 import { mustGetAuthData } from "@/lib/clerk";
+import type { GetRubrosDto } from "./dtos/get-rubros.dto";
 
 export const searchByDNI = api(
   { expose: true, method: "GET", path: "/sunat/search-by-dni/:dni" },
@@ -48,6 +50,24 @@ export const searchByRUC = api(
     }
 
     return result;
+  },
+);
+
+export const getRubros = api(
+  {
+    expose: true,
+    auth: false,
+    method: "GET",
+    path: "/sunat/rubros",
+  },
+  async (): Promise<GetRubrosDto> => {
+    const { sunatService } = await applicationContext;
+
+    const rubros = sunatService.getRubros();
+
+    return {
+      rubros,
+    };
   },
 );
 
