@@ -23,9 +23,9 @@ export const searchByDNI = api(
     if (Number.isNaN(Number.parseInt(dni)))
       throw APIError.invalidArgument("dni must be contain only digits");
 
-    const { peruConnectService } = await applicationContext;
+    const { sunatService } = await applicationContext;
 
-    const result = await peruConnectService.searchByDNI(dni);
+    const result = await sunatService.searchByDNI(dni);
     if (!result) {
       throw APIError.notFound("dni not found");
     }
@@ -40,9 +40,9 @@ export const searchByRUC = api(
     const errorMessage = checkRuc(ruc);
     if (errorMessage) throw APIError.invalidArgument(errorMessage);
 
-    const { peruConnectService } = await applicationContext;
+    const { sunatService } = await applicationContext;
 
-    const result = await peruConnectService.searchByRUC(ruc);
+    const result = await sunatService.searchByRUC(ruc);
     if (!result) {
       throw APIError.notFound("ruc not found");
     }
@@ -62,7 +62,7 @@ export const saveSunatProfile = api(
     const apiError = checkSaveSunatProfileDto(payload);
     if (apiError) throw apiError;
 
-    const { peruConnectService } = await applicationContext;
+    const { sunatService } = await applicationContext;
 
     const authenticatedUser = mustGetAuthData();
     const clerkId = authenticatedUser.userID;
@@ -79,7 +79,7 @@ export const saveSunatProfile = api(
       `qompa internal user id is '${userId}'...(clerk id was '${clerkId}')`,
     );
 
-    const profile = await peruConnectService.saveSunatProfile(userId, payload);
+    const profile = await sunatService.saveSunatProfile(userId, payload);
 
     return {
       sunatProfile: toSerializableSunatProfile(profile),

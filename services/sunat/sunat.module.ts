@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common";
 
-import { PeruConnectService } from "./sunat.service";
+import { SunatService } from "./sunat.service";
 
 @Module({
-  providers: [PeruConnectService],
+  providers: [SunatService],
 })
-export class PeruConnectModule {}
+export class SunatModule {}

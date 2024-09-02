@@ -21,7 +21,7 @@ interface EntitySearchParam {
 }
 
 @Injectable()
-export class PeruConnectService extends PrismaClient implements OnModuleInit {
+export class SunatService extends PrismaClient implements OnModuleInit {
   private sunatEncryptionKey: string;
 
   async onModuleInit() {
