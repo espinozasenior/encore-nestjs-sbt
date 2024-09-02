@@ -1,4 +1,4 @@
-import type { users as UserModel } from "@prisma/client";
+import type { User as UserModel } from "@prisma/client";
 
 import type { SerializableUser } from "../interfaces/serializable-user.interface";
 
