@@ -14,6 +14,7 @@ import {
 import applicationContext from "../applicationContext";
 import type { RucDto } from "./interfaces/ruc.interface";
 import type { DniDto } from "./interfaces/dni.interface";
+import type { IRubro } from "./interfaces/rubro.interface";
 
 interface EntitySearchParam {
   type: "RUC" | "DNI";
@@ -32,6 +33,55 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     super();
 
     this.sunatEncryptionKey = process.env.INTERNAL_SUNAT_ENCRYPTION_KEY;
+  }
+
+  getRubros(): IRubro[] {
+    return [
+      {
+        id: "associations-extraterritorial-organizations",
+        name: "Asociaciones y Organizaciones Extraterritoriales",
+      },
+      {
+        id: "agricultural",
+        name: "Agropecuario",
+      },
+      {
+        id: "mining-hydrocarbons",
+        name: "Minería e Hidrocarburos",
+      },
+      {
+        id: "fishing",
+        name: "Pesca",
+      },
+      {
+        id: "services",
+        name: "Servicios",
+      },
+      {
+        id: "fintech",
+        name: "Fintech",
+      },
+      {
+        id: "commerce",
+        name: "Comercio",
+      },
+      {
+        id: "construction",
+        name: "Construcción",
+      },
+      {
+        id: "manufacturing-primary-resource-processors",
+        name: "Manufactura - Procesadores de Recursos Primarios",
+      },
+      {
+        id: "manufacturing-non-primary-industry",
+        name: "Manufactura - Industria No Primaria",
+      },
+      {
+        id: "securities-intermediation",
+        name: "Intermediación de Valores",
+      },
+    ];
   }
 
   async saveSunatProfile(
