@@ -11,11 +11,11 @@ import {
 } from "./dtos/save-sunat-profile.dto";
 import type { DniDto } from "./interfaces/dni.interface";
 import type { RucDto } from "./interfaces/ruc.interface";
-import { checkRuc } from "@/lib/peru-connect";
+import { checkRuc } from "@/lib/sunat";
 import { mustGetAuthData } from "@/lib/clerk";
 
 export const searchByDNI = api(
-  { expose: true, method: "GET", path: "/peru-connect/search-by-dni/:dni" },
+  { expose: true, method: "GET", path: "/sunat/search-by-dni/:dni" },
   async ({ dni }: { dni: string }): Promise<DniDto> => {
     if (!dni) throw APIError.invalidArgument("dni is required");
     if (dni.length !== 9)
@@ -35,7 +35,7 @@ export const searchByDNI = api(
 );
 
 export const searchByRUC = api(
-  { expose: true, method: "GET", path: "/peru-connect/search-by-ruc/:ruc" },
+  { expose: true, method: "GET", path: "/sunat/search-by-ruc/:ruc" },
   async ({ ruc }: { ruc: string }): Promise<RucDto> => {
     const errorMessage = checkRuc(ruc);
     if (errorMessage) throw APIError.invalidArgument(errorMessage);
@@ -56,7 +56,7 @@ export const saveSunatProfile = api(
     expose: true,
     auth: true,
     method: "POST",
-    path: "/peru-connect/sunat-profile",
+    path: "/sunat/sunat-profile",
   },
   async (payload: ISaveSunatProfileDto): Promise<ISunatProfileResponse> => {
     const apiError = checkSaveSunatProfileDto(payload);

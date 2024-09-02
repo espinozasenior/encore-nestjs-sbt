@@ -1,4 +1,4 @@
-import { checkRuc } from "@/lib/peru-connect";
+import { checkRuc } from "@/lib/sunat";
 
 export interface ICreateOrganizationDto {
   name: string;
