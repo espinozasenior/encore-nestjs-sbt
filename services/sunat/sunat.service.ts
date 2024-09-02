@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { parse as parseHtml } from "node-html-parser";
 import { PrismaClient, type SunatProfile } from "@prisma/client";
+import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
 import { users } from "~encore/clients";
 import log from "encore.dev/log";
@@ -21,6 +22,10 @@ interface EntitySearchParam {
   number: string;
 }
 
+const apiPeruLambdaApiKey = secret("ApiPeruLambdaApiKey");
+const sunatEncryptionKey = secret("SunatEncryptionKey");
+const apiPeruLambdaUrl = secret("ApiPeruLambdaUrl");
+
 @Injectable()
 export class SunatService extends PrismaClient implements OnModuleInit {
   private sunatEncryptionKey: string;
@@ -32,7 +37,7 @@ export class SunatService extends PrismaClient implements OnModuleInit {
   constructor() {
     super();
 
-    this.sunatEncryptionKey = process.env.INTERNAL_SUNAT_ENCRYPTION_KEY;
+    this.sunatEncryptionKey = sunatEncryptionKey();
   }
 
   getRubros(): IRubro[] {
@@ -169,10 +174,10 @@ export class SunatService extends PrismaClient implements OnModuleInit {
   ): Promise<T[]> {
     if (documents.length === 0) return [];
 
-    const response = await fetch(process.env.APIPERU_URL, {
+    const response = await fetch(apiPeruLambdaUrl(), {
       method: "POST",
       headers: {
-        "X-Api-Key": process.env.APIPERU_API_KEY,
+        "X-Api-Key": apiPeruLambdaApiKey(),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

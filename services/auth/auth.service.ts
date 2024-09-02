@@ -7,10 +7,15 @@ import {
   type User,
 } from "@clerk/backend";
 import { PrismaClient } from "@prisma/client";
+import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 
 import { QOMPA_INTERNAL_USER_ID_KEY } from "./auth";
+
+const clerkPublishableKey = secret("ClerkPublishableKey");
+const clerkSecretKey = secret("ClerkSecretKey");
+const clerkJwtKey = secret("ClerkJwtKey");
 
 @Injectable()
 export class AuthService extends PrismaClient implements OnModuleInit {
@@ -24,16 +29,16 @@ export class AuthService extends PrismaClient implements OnModuleInit {
     super();
 
     this.clerkClient = createClerkClient({
-      publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
-      secretKey: process.env.CLERK_SECRET_KEY,
+      publishableKey: clerkPublishableKey(),
+      secretKey: clerkSecretKey(),
     });
   }
 
   async verifyToken(clerkToken: string): Promise<JwtPayload> {
     try {
       const jwt = await verifyToken(clerkToken, {
-        secretKey: process.env.CLERK_SECRET_KEY,
-        jwtKey: process.env.CLERK_JWT_PUBLIC_KEY,
+        secretKey: clerkSecretKey(),
+        jwtKey: clerkJwtKey(),
       });
 
       return jwt;
