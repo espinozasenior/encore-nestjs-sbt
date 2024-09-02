@@ -19,8 +19,9 @@ export const searchByDNI = api(
   { expose: true, method: "GET", path: "/sunat/search-by-dni/:dni" },
   async ({ dni }: { dni: string }): Promise<SearchDNIResponseDto> => {
     if (!dni) throw APIError.invalidArgument("dni is required");
-    if (dni.length !== 9)
-      throw APIError.invalidArgument("dni must have 9 digits");
+
+    if (dni.length !== 8)
+      throw APIError.invalidArgument("dni must have 8 digits");
     if (Number.isNaN(Number.parseInt(dni)))
       throw APIError.invalidArgument("dni must be contain only digits");
 
