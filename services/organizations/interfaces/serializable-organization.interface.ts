@@ -3,5 +3,5 @@ export interface SerializableOrganization {
   name: string;
   category: string;
   ruc: string;
-  size: number;
+  size: string;
 }

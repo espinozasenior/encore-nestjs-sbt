@@ -1,10 +1,11 @@
 import { checkRuc } from "@/lib/sunat";
+import { TEAM_SIZES, type TeamSize } from "../types/team-size";
 
 export interface ICreateOrganizationDto {
   name: string;
   category: string;
   ruc: string;
-  size: number;
+  size: TeamSize;
 }
 
 export const checkCreateOrganizationDto = (
@@ -21,8 +22,9 @@ export const checkCreateOrganizationDto = (
   if (!dto.category) return "category is required";
 
   if (!dto.size) return "size is required";
-  if (dto.size < 1) {
-    return "team size must be greater than 0";
+
+  if (!TEAM_SIZES.includes(dto.size)) {
+    return `size must be one of the following values: ${TEAM_SIZES.join(", ")}`;
   }
 
   return null;
