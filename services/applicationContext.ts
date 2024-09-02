@@ -2,10 +2,10 @@ import { NestFactory } from "@nestjs/core";
 
 import { OrganizationsService } from "./organizations/organizations.service";
 import { OrganizationsModule } from "./organizations/organizations.module";
-import { PeruConnectService } from "./peru-connect/peru-connect.service";
-import { PeruConnectModule } from "./peru-connect/peru-connect.module";
 import { SecurityService } from "./security/security.service";
 import { SecurityModule } from "./security/security.module";
+import { PeruConnectService } from "./sunat/sunat.service";
+import { PeruConnectModule } from "./sunat/sunat.module";
 import { UsersService } from "./users/users.service";
 import { UsersModule } from "./users/users.module";
 import { AuthService } from "./auth/auth.service";

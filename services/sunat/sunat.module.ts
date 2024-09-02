@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { PeruConnectService } from "./peru-connect.service";
+import { PeruConnectService } from "./sunat.service";
 
 @Module({
   providers: [PeruConnectService],
