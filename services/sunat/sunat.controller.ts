@@ -97,7 +97,10 @@ export const saveSunatProfile = api(
 
     const userId = authenticatedUser.metadata.publicMetadata[
       QOMPA_INTERNAL_USER_ID_KEY
-    ] as number;
+    ] as number | undefined;
+    if (!userId) {
+      throw APIError.notFound("you should create your user first");
+    }
 
     log.debug(
       `qompa internal user id is '${userId}'...(clerk id was '${clerkId}')`,
