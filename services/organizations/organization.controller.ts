@@ -1,5 +1,7 @@
 import { api, APIError } from "encore.dev/api";
+import { sunat } from "~encore/clients";
 
+import type { IRubro } from "@/services/sunat/interfaces/rubro.interface";
 import type { SerializableOrganization } from "./interfaces/serializable-organization.interface";
 import {
   checkCreateOrganizationDto,
@@ -17,7 +19,11 @@ export const createOrganization = api(
   async (payload: ICreateOrganizationDto): Promise<Response> => {
     const { organizationsService } = await applicationContext;
 
-    const errorMessage = checkCreateOrganizationDto(payload);
+    const rubros: string[] = (await sunat.getRubros()).rubros.map(
+      (r: IRubro) => r.id,
+    );
+
+    const errorMessage = checkCreateOrganizationDto(payload, rubros);
     if (errorMessage) throw APIError.invalidArgument(errorMessage);
 
     const organization = await organizationsService.create(payload);
