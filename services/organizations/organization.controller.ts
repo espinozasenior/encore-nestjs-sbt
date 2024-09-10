@@ -63,8 +63,6 @@ export const createOrganization = api(
     const authenticatedUser = mustGetAuthData();
 
     const userId = mustGetUserIdFromPublicMetadata(authenticatedUser);
-    console.log("userId is...", userId);
-    console.log("payload is...", payload);
     const organization = await organizationsService.create(userId, payload);
 
     return {
