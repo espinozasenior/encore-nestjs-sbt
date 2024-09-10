@@ -1,11 +1,12 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { APIError } from "encore.dev/api";
+import log from "encore.dev/log";
 import {
   type Organization as OrganizationModel,
   OrganizationRole,
   type Prisma,
   PrismaClient,
 } from "@prisma/client";
-import { APIError } from "encore.dev/api";
 
 @Injectable()
 export class OrganizationsService extends PrismaClient implements OnModuleInit {
@@ -35,25 +36,30 @@ export class OrganizationsService extends PrismaClient implements OnModuleInit {
       );
     }
 
-    const organization = await this.$transaction(
-      async (tx): Promise<OrganizationModel> => {
-        const organization = await tx.organization.create({
-          data: inputs,
-        });
+    try {
+      const organization = await this.$transaction(
+        async (tx): Promise<OrganizationModel> => {
+          const organization = await tx.organization.create({
+            data: inputs,
+          });
 
-        await tx.organizationMembers.create({
-          data: {
-            organizationId: organization.id,
-            role: OrganizationRole.owner,
-            userId: userId,
-          },
-        });
+          await tx.organizationMembers.create({
+            data: {
+              organizationId: organization.id,
+              role: OrganizationRole.owner,
+              userId: userId,
+            },
+          });
 
-        return organization;
-      },
-    );
+          return organization;
+        },
+      );
 
-    return organization;
+      return organization;
+    } catch (error) {
+      log.error(error);
+      throw APIError.internal("something went wrong creating the organization");
+    }
   }
 
   async existsByRuc(ruc: string): Promise<boolean> {
