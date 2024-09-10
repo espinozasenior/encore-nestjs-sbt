@@ -80,7 +80,7 @@ export const saveSunatProfile = api(
     expose: true,
     auth: true,
     method: "POST",
-    path: "/sunat/sunat-profile",
+    path: "/sunat/profile",
   },
   async (payload: ISaveSunatProfileDto): Promise<ISunatProfileResponse> => {
     const apiError = checkSaveSunatProfileDto(payload);
