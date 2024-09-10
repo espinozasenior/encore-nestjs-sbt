@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   type Organization as OrganizationModel,
+  OrganizationRole,
   type Prisma,
   PrismaClient,
 } from "@prisma/client";
@@ -12,7 +13,20 @@ export class OrganizationsService extends PrismaClient implements OnModuleInit {
     await this.$connect();
   }
 
+  async getAllForUser(userId: number): Promise<OrganizationModel[]> {
+    return await this.organization.findMany({
+      where: {
+        organizationMembers: {
+          some: {
+            userId,
+          },
+        },
+      },
+    });
+  }
+
   async create(
+    userId: number,
     inputs: Prisma.OrganizationCreateInput,
   ): Promise<OrganizationModel> {
     if (await this.existsByRuc(inputs.ruc)) {
@@ -21,9 +35,25 @@ export class OrganizationsService extends PrismaClient implements OnModuleInit {
       );
     }
 
-    return await this.organization.create({
-      data: inputs,
-    });
+    const organization = await this.$transaction(
+      async (tx): Promise<OrganizationModel> => {
+        const organization = await tx.organization.create({
+          data: inputs,
+        });
+
+        await tx.organizationMembers.create({
+          data: {
+            organizationId: organization.id,
+            role: OrganizationRole.owner,
+            userId: userId,
+          },
+        });
+
+        return organization;
+      },
+    );
+
+    return organization;
   }
 
   async existsByRuc(ruc: string): Promise<boolean> {
