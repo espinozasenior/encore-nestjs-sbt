@@ -9,12 +9,13 @@ import { toSerializableSunatProfile } from "./helpers/serializable";
 import type { GetRubrosDto } from "./dtos/get-rubros.dto";
 import { QOMPA_INTERNAL_USER_ID_KEY } from "../auth/auth";
 import applicationContext from "../applicationContext";
+import { mustGetAuthData } from "@/lib/clerk";
+import { checkRuc } from "@/lib/sunat";
 import {
   checkSaveSunatProfileDto,
   type ISaveSunatProfileDto,
 } from "./dtos/save-sunat-profile.dto";
-import { checkRuc } from "@/lib/sunat";
-import { mustGetAuthData } from "@/lib/clerk";
+
 const mustGetUserIdFromPublicMetadata = (
   authenticatedUser: AuthenticatedUser,
 ): number => {
@@ -84,6 +85,41 @@ export const getRubros = api(
 
     return {
       rubros,
+    };
+  },
+);
+
+export const getSunatProfile = api(
+  {
+    expose: true,
+    auth: true,
+    method: "GET",
+    path: "/sunat/profile",
+  },
+  async (): Promise<ISunatProfileResponse> => {
+    const authenticatedUser = mustGetAuthData();
+    const clerkId = authenticatedUser.userID;
+
+    log.debug(
+      `user identified with clerk id '${clerkId}' wants to get its sunat profile`,
+    );
+
+    const userId = mustGetUserIdFromPublicMetadata(authenticatedUser);
+    if (!userId) throw APIError.notFound("you should create your user first");
+
+    log.debug(
+      `qompa internal user id is '${userId}'...(clerk id was '${clerkId}')`,
+    );
+
+    const { sunatService } = await applicationContext;
+
+    const profile = await sunatService.getSunatProfile(userId);
+    if (!profile) {
+      throw APIError.notFound("sunat profile not found");
+    }
+
+    return {
+      sunatProfile: toSerializableSunatProfile(profile),
     };
   },
 );

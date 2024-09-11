@@ -89,6 +89,12 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     ];
   }
 
+  async getSunatProfile(userId: number): Promise<SunatProfile | null> {
+    return this.sunatProfile.findUnique({
+      where: { userId },
+    });
+  }
+
   async saveSunatProfile(
     userOwnerId: number,
     { solUsername, solKey }: ISaveSunatProfileDto,
