@@ -1,1 +1,2 @@
+export PATH="$PATH:/usr/local/opt/node@20/bin"
 npx --no -- commitlint --edit ${1}
