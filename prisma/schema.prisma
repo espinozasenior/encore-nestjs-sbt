@@ -52,7 +52,7 @@ model OrganizationMembers {
 model SunatProfile {
   id              Int    @id @default(autoincrement())
   userId          Int    @unique @map("user_id")
-  account         String @unique
+  solUsername     String @unique @map("sol_username")
   encryptedSolKey String @map("encrypted_sol_key")
   user            User   @relation(fields: [userId], references: [id])
 
