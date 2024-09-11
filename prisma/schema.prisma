@@ -8,32 +8,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum OrganizationRole {
+  owner
+
+  @@map("organization_role")
+}
+
 model User {
-  id                              Int           @id @default(autoincrement())
-  clerkId                         String        @unique @map("clerk_id")
-  onboardedAt                     DateTime?     @map("onboarded_at")
-  acceptTermsAndPrivacyPolicy     Boolean       @map("accept_terms_and_privacy_policy")
-  acknowledgesLegalRepresentation Boolean       @map("acknowledges_legal_representation")
+  id                              Int                   @id @default(autoincrement())
+  clerkId                         String                @unique @map("clerk_id")
+  onboardedAt                     DateTime?             @map("onboarded_at")
+  acceptTermsAndPrivacyPolicy     Boolean               @map("accept_terms_and_privacy_policy")
+  acknowledgesLegalRepresentation Boolean               @map("acknowledges_legal_representation")
   sunatProfile                    SunatProfile?
+  organizationMembers             OrganizationMembers[]
 
   @@map("users")
 }
 
 model Organization {
-  id       Int    @id @default(autoincrement())
+  id                  Int                   @id @default(autoincrement())
   // uriName String @unique
-  name     String @unique
-  category String
-  ruc      String @unique
-  size     String @db.Char(10)
+  name                String                @unique
+  category            String
+  ruc                 String                @unique
+  size                String                @db.Char(10)
+  organizationMembers OrganizationMembers[]
 
   @@map("organizations")
+}
+
+model OrganizationMembers {
+  id             Int              @id @default(autoincrement())
+  organizationId Int              @map("organization_id")
+  userId         Int              @map("user_id")
+  role           OrganizationRole @default(owner) @map("role")
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  user           User             @relation(fields: [userId], references: [id])
+
+  @@map("organization_members")
 }
 
 model SunatProfile {
   id              Int    @id @default(autoincrement())
   userId          Int    @unique @map("user_id")
-  account         String @unique
+  solUsername     String @unique @map("sol_username")
   encryptedSolKey String @map("encrypted_sol_key")
   user            User   @relation(fields: [userId], references: [id])
 

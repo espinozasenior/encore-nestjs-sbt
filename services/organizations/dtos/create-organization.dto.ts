@@ -10,6 +10,7 @@ export interface ICreateOrganizationDto {
 
 export const checkCreateOrganizationDto = (
   dto: ICreateOrganizationDto,
+  validRubros: string[],
 ): string | null => {
   const errorMessage = checkRuc(dto.ruc);
   if (errorMessage) return errorMessage;
@@ -20,6 +21,10 @@ export const checkCreateOrganizationDto = (
   }
 
   if (!dto.category) return "category is required";
+
+  if (!validRubros.includes(dto.category)) {
+    return `category is not between the following rubros: ${validRubros.join(", ")}`;
+  }
 
   if (!dto.size) return "size is required";
 

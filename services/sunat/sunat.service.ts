@@ -89,11 +89,20 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     ];
   }
 
+  async getSunatProfile(userId: number): Promise<SunatProfile | null> {
+    return this.sunatProfile.findUnique({
+      where: { userId },
+    });
+  }
+
   async saveSunatProfile(
     userOwnerId: number,
-    { account, solKey }: ISaveSunatProfileDto,
+    { solUsername, solKey }: ISaveSunatProfileDto,
   ): Promise<SunatProfile> {
-    const apiError = checkSaveSunatProfileDto({ account, solKey });
+    const apiError = checkSaveSunatProfileDto({
+      solUsername,
+      solKey,
+    });
     if (apiError) throw apiError;
 
     const { securityService } = await applicationContext;
@@ -125,7 +134,7 @@ export class SunatService extends PrismaClient implements OnModuleInit {
     const profile = await this.sunatProfile.create({
       data: {
         userId: userOwnerId,
-        account,
+        solUsername,
         encryptedSolKey,
       },
     });

@@ -7,5 +7,5 @@ export const toSerializableSunatProfile = (
 ): SerializableSunatProfile => ({
   id: profile.id,
   userId: profile.userId,
-  account: profile.account,
+  solUsername: profile.solUsername,
 });
