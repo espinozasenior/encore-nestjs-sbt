@@ -1,28 +1,28 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
-	"linter": {
-        "enabled": true,
-		"rules": {
-            "recommended": true,
-			"security": {
-				"noDangerouslySetInnerHtml": "off"
-			},
-			"suspicious": {
-				"noRedeclare": "off"
-			}
-		}
-	},
-    "formatter": {
-        "ignore": ["node_modules", ".encore", ".husky"],
-        "indentStyle": "space",
-        "indentWidth": 2
-    },
-	"organizeImports": {
-		"enabled": false
-	},
-    "javascript": {
-        "parser": {
-          "unsafeParameterDecoratorsEnabled": true
-        }
+  "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      },
+      "suspicious": {
+        "noRedeclare": "off"
+      }
     }
+  },
+  "formatter": {
+    "ignore": ["node_modules", ".encore", ".husky"],
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "organizeImports": {
+    "enabled": false
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  }
 }
