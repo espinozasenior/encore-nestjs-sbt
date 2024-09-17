@@ -2,10 +2,13 @@
 
 export PATH="$PATH:/usr/local/opt/node@20/bin"
 
+target_directories="./lib ./services ./prisma"
+
+# shellcheck disable=SC2086
 if test -f "/etc/os-release"; then
     if grep 'ID=nixos' /etc/os-release >/dev/null; then
-        PATH="$(echo "$PATH" | sed -e 's@:node_modules/.bin@@g' -e 's@node_modules/.bin:@@g')" biome check --write ./services
+        PATH="$(echo "$PATH" | sed -e 's@:node_modules/.bin@@g' -e 's@node_modules/.bin:@@g')" biome check --write $target_directories
     fi
 else
-    npx @biomejs/biome check --write ./services
+    npx @biomejs/biome check --write $target_directories
 fi
