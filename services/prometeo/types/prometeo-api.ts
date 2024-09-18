@@ -5,16 +5,24 @@ export interface PrometeoAPILoginRequestBody {
   type?: string;
 }
 
-export interface PrometeoAPISuccessfulLoginResponse {
-  status: "logged_in";
-  key: string;
-}
-
 export interface PrometeoAPIErrorLoginResponse {
   status: "error";
   message: string;
 }
 
+export interface PrometeoAPISuccessfulLoginResponse {
+  status: "logged_in";
+  key: string;
+}
+
 export type PrometeoAPILoginResponse =
   | PrometeoAPISuccessfulLoginResponse
+  | PrometeoAPIErrorLoginResponse;
+
+export interface PrometeoAPISuccessfulLogoutResponse {
+  status: "logged_out";
+}
+
+export type PrometeoAPILogoutResponse =
+  | PrometeoAPISuccessfulLogoutResponse
   | PrometeoAPIErrorLoginResponse;
