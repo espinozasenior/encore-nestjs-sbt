@@ -114,7 +114,12 @@ export class PrometeoService {
 
     const results = await Promise.allSettled(
       providers
-        .filter((p) => p.country === countryCode)
+        .filter((p) => {
+          const isSpecifiedCountry = p.country === countryCode;
+          const isCorp = p.code.includes("corp") || p.code.includes("smes");
+
+          return isSpecifiedCountry && isCorp;
+        })
         .map(async (p) => await getProviderDetails(p.code)),
     );
 
