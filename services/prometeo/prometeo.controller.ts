@@ -13,3 +13,19 @@ export const getSuppliers = api(
     return { data };
   },
 );
+
+// ! restrict access to internal level
+export const login = api(
+  { expose: true, method: "POST", path: "/third-party/prometeo/login" },
+  async (payload: {
+    provider: string;
+    username: string;
+    password: string;
+  }): Promise<{ key: string }> => {
+    const { prometeoService } = await applicationContext;
+
+    const { key } = await prometeoService.login(payload);
+
+    return { key };
+  },
+);
