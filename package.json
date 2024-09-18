@@ -36,6 +36,12 @@
     "@biomejs/biome"
   ],
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "start": "npm run prisma && encore run",
+    "prisma": "npx prisma migrate dev --name init --schema prisma/schema-mongo.prisma; npx prisma migrate dev --name init --schema prisma/schema-psql.prisma",
+    "prisma:migrate:dev": "npx prisma migrate dev --skip-seed --schema prisma/schema-mongo.prisma",
+    "start:migrate:prod": "npx prisma migrate deploy && npm run start",
+    "prisma:push": "npx prisma db push",
+    "prisma:seed": "npx prisma db seed"
   }
 }
