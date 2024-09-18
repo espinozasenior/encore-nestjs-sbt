@@ -5,11 +5,14 @@ import log from "encore.dev/log";
 import { Redis } from "ioredis";
 
 import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
+import type { UserBankAccount } from "./types/user-account";
 import type {
+  PrometeoAPISuccessfulListUserAccountsResponse,
+  PrometeoAPIListUserAccountsResponse,
   PrometeoAPISuccessfulLoginResponse,
   PrometeoAPILoginRequestBody,
-  PrometeoAPILoginResponse,
   PrometeoAPILogoutResponse,
+  PrometeoAPILoginResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import { sleep } from "@/lib/thread";
@@ -254,7 +257,7 @@ export class PrometeoService {
     // it could be 2XX but we still need to check the status :)))
     if (result.status === "interaction_required") {
       // they never explain the purpose of this
-      console.debug("context is...", result.context);
+      log.debug("context is...", result.context);
 
       throw APIError.permissionDenied("interaction required");
     }
@@ -279,9 +282,7 @@ export class PrometeoService {
   async logout(key: string): Promise<{
     success: boolean;
   }> {
-    const queryParams = new URLSearchParams();
-    queryParams.append("key", key);
-
+    const queryParams = new URLSearchParams({ key });
     const url = `${prometeoApiUrl()}/logout/?${queryParams}`;
 
     const response = await fetch(url, {
@@ -306,5 +307,89 @@ export class PrometeoService {
     return {
       success: data.status === "logged_out",
     };
+  }
+
+  private async fetchUserAccounts(
+    key: string,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<PrometeoAPISuccessfulListUserAccountsResponse> {
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const queryParams = new URLSearchParams({ key });
+    const url = `${prometeoApiUrl()}/account/?${queryParams}`;
+
+    const faultTolerantListUserAccounts = async (
+      retries = 0,
+      backoff = 100,
+    ) => {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "X-API-Key": prometeoApiKey(),
+        },
+      });
+
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          log.error(`login failed after ${retries} attempts`);
+
+          throw APIError.deadlineExceeded("login failed");
+        }
+
+        const { status } = response;
+
+        if (status === 502) {
+          log.warn(
+            `cannot list user accounts, trying again in... ${backoff}ms... (${retries} retries)`,
+          );
+
+          await sleep(backoff);
+
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faultTolerantListUserAccounts(retries + 1, nextBackoff);
+        }
+
+        const text = await response.text();
+
+        throw new Error(`request failed with status code ${status}: ${text}`);
+      }
+
+      const data = await response.json();
+
+      return data as PrometeoAPIListUserAccountsResponse;
+    };
+
+    const result = await faultTolerantListUserAccounts();
+    // ! check if the status is "success" as well
+
+    if (result.status === "error") {
+      if (result.message === "Invalid key") {
+        throw APIError.permissionDenied(
+          "Prometeo API key is invalid or expired",
+        );
+      }
+
+      log.error(`Prometeo API error: ${result}`);
+
+      throw APIError.internal("unexpected error");
+    }
+
+    return result;
+  }
+
+  async listUserAccounts(key: string): Promise<UserBankAccount[]> {
+    try {
+      const { accounts } = await this.fetchUserAccounts(key);
+
+      return accounts;
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "error listing user accounts");
+
+      throw APIError.unavailable("cannot list user accounts");
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { api, type Header } from "encore.dev/api";
 
 import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
+import type { UserBankAccount } from "./types/user-account";
 import applicationContext from "../applicationContext";
 import type { Supplier } from "./types/supplier";
 
@@ -41,5 +42,18 @@ export const logout = api(
     const { success } = await prometeoService.logout(payload.key);
 
     return { success };
+  },
+);
+
+export const listUserAccounts = api(
+  { expose: true, method: "GET", path: "/third-party/prometeo/accounts" },
+  async (payload: { key: Header<"X-Prometeo-Session-Key"> }): Promise<{
+    data: UserBankAccount[];
+  }> => {
+    const { prometeoService } = await applicationContext;
+
+    const data = await prometeoService.listUserAccounts(payload.key);
+
+    return { data };
   },
 );
