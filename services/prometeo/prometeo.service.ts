@@ -9,6 +9,7 @@ import type {
   PrometeoAPISuccessfulLoginResponse,
   PrometeoAPILoginRequestBody,
   PrometeoAPILoginResponse,
+  PrometeoAPILogoutResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import { sleep } from "@/lib/thread";
@@ -265,5 +266,37 @@ export class PrometeoService {
     log.error(`login failed with unexpected error: ${result}`);
 
     throw APIError.internal("unexpected error");
+  }
+
+  async logout(key: string): Promise<{
+    success: boolean;
+  }> {
+    const queryParams = new URLSearchParams();
+    queryParams.append("key", key);
+
+    const url = `${prometeoApiUrl()}/logout/?${queryParams}`;
+
+    const response = await fetch(url, {
+      method: "GET", // weird design
+      headers: { "X-API-Key": prometeoApiKey() },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      const { status } = response;
+
+      log.error(`logout failed with status code '${status}': ${text}`);
+      log.warn(
+        "[resilience] maybe we should implement a retry mechanism here...",
+      );
+
+      throw APIError.internal("unexpected error");
+    }
+
+    const data = (await response.json()) as PrometeoAPILogoutResponse;
+
+    return {
+      success: data.status === "logged_out",
+    };
   }
 }
