@@ -1,9 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { secret } from "encore.dev/config";
+import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 import { Redis } from "ioredis";
 
 import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
+import type {
+  PrometeoAPISuccessfulLoginResponse,
+  PrometeoAPILoginRequestBody,
+  PrometeoAPILoginResponse,
+} from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import { sleep } from "@/lib/thread";
 
@@ -170,5 +176,94 @@ export class PrometeoService {
     }
 
     return suppliers;
+  }
+
+  async login(
+    payload: PrometeoAPILoginRequestBody,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<PrometeoAPISuccessfulLoginResponse> {
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const faultTolerantLogin = async (
+      retries = 0,
+      backoff = 100,
+    ): Promise<PrometeoAPILoginResponse> => {
+      if (retries > 0) {
+        log.warn(`trying to login again in... (${retries} retries)`);
+      }
+
+      const bodyParams = new URLSearchParams();
+      bodyParams.append("provider", payload.provider);
+      bodyParams.append("username", payload.username);
+      bodyParams.append("password", payload.password);
+      if (payload.type) bodyParams.append("type", payload.type);
+
+      const response = await fetch(`${prometeoApiUrl()}/login/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+          "X-API-Key": prometeoApiKey(),
+        },
+        body: bodyParams.toString(),
+      });
+
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          log.error(`login failed after ${retries} attempts`);
+
+          throw APIError.deadlineExceeded("login failed");
+        }
+
+        const { status } = response;
+
+        if (status === 502) {
+          log.warn(
+            `login failed with status ${status}, trying again in ${backoff}ms... (${retries} retries)`,
+          );
+
+          await sleep(backoff);
+
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faultTolerantLogin(retries + 1, nextBackoff);
+        }
+
+        const text = await response.text();
+
+        if (status === 403 && text.includes("wrong_credentials")) {
+          log.warn("login failed with status 403...");
+
+          throw APIError.permissionDenied("wrong credentials");
+        }
+
+        // TODO: provide a more deep error analysis!
+        // ! don't expose error
+        throw new Error(`request failed with status code ${status}: ${text}`);
+      }
+
+      const data = await response.json();
+
+      return data as PrometeoAPILoginResponse;
+    };
+
+    const result = await faultTolerantLogin();
+
+    // it could be 2XX but we still need to check the status :)))
+    if (result.status === "logged_in") {
+      return result;
+    }
+
+    if (result.message.includes("unknown provider")) {
+      const { provider } = payload;
+
+      log.debug(`requester has passed an unknown provider...!: ${provider}`);
+
+      throw APIError.invalidArgument("unknown provider");
+    }
+
+    log.error(`login failed with unexpected error: ${result}`);
+
+    throw APIError.internal("unexpected error");
   }
 }
