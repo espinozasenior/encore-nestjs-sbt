@@ -198,6 +198,7 @@ export class PrometeoService {
       bodyParams.append("username", payload.username);
       bodyParams.append("password", payload.password);
       if (payload.type) bodyParams.append("type", payload.type);
+      if (payload.otp) bodyParams.append("otp", payload.otp);
 
       const response = await fetch(`${prometeoApiUrl()}/login/`, {
         method: "POST",
@@ -251,21 +252,28 @@ export class PrometeoService {
     const result = await faultTolerantLogin();
 
     // it could be 2XX but we still need to check the status :)))
-    if (result.status === "logged_in") {
-      return result;
+    if (result.status === "interaction_required") {
+      // they never explain the purpose of this
+      console.debug("context is...", result.context);
+
+      throw APIError.permissionDenied("interaction required");
     }
 
-    if (result.message.includes("unknown provider")) {
-      const { provider } = payload;
+    if (result.status === "error") {
+      if (result.message.includes("unknown provider")) {
+        const { provider } = payload;
 
-      log.debug(`requester has passed an unknown provider...!: ${provider}`);
+        log.debug(`requester has passed an unknown provider...!: ${provider}`);
 
-      throw APIError.invalidArgument("unknown provider");
+        throw APIError.invalidArgument("unknown provider");
+      }
+
+      log.error(`login failed with unexpected error: ${result}`);
+
+      throw APIError.internal("unexpected error");
     }
 
-    log.error(`login failed with unexpected error: ${result}`);
-
-    throw APIError.internal("unexpected error");
+    return result;
   }
 
   async logout(key: string): Promise<{
