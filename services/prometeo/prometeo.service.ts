@@ -14,6 +14,16 @@ const redisPassword = secret("RedisPassword");
 const redisPort = secret("RedisPort");
 const redisHost = secret("RedisHost");
 
+interface PrometeoRequestConfig {
+  maxBackoff: number;
+  maxAttempts: number;
+}
+
+const defaultConfig: PrometeoRequestConfig = {
+  maxBackoff: 3000,
+  maxAttempts: 5,
+};
+
 @Injectable()
 export class PrometeoService {
   cache: Redis;
@@ -70,11 +80,13 @@ export class PrometeoService {
     return data as { status: string; provider: Supplier };
   }
 
-  private async getDetailedProviders(countryCode = "PE"): Promise<Supplier[]> {
+  private async getDetailedProviders(
+    countryCode = "PE",
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<Supplier[]> {
     const { providers } = await this.getProvidersList();
 
-    const maxAttempts = 5;
-    const maxBackoff = 3000;
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
     const getProviderDetails = async (
       code: string,
@@ -132,7 +144,10 @@ export class PrometeoService {
     return filteredResults.map((result) => result.value);
   }
 
-  async getSuppliers(countryCode = "PE"): Promise<Supplier[]> {
+  async getSuppliers(
+    countryCode = "PE",
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<Supplier[]> {
     const key = "prometeo-suppliers";
 
     const result = await this.cache.get(key);
@@ -140,7 +155,7 @@ export class PrometeoService {
       return JSON.parse(result) as Supplier[];
     }
 
-    const suppliers = await this.getDetailedProviders(countryCode);
+    const suppliers = await this.getDetailedProviders(countryCode, config);
 
     try {
       const value = JSON.stringify(suppliers);
