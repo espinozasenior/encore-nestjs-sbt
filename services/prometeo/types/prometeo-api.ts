@@ -3,11 +3,17 @@ export interface PrometeoAPILoginRequestBody {
   username: string;
   password: string;
   type?: string;
+  otp?: string;
 }
 
 export interface PrometeoAPIErrorLoginResponse {
   status: "error";
   message: string;
+}
+
+export interface PrometeoAPIIncompleteLoginResponse {
+  status: "interaction_required";
+  context: string;
 }
 
 export interface PrometeoAPISuccessfulLoginResponse {
@@ -17,6 +23,7 @@ export interface PrometeoAPISuccessfulLoginResponse {
 
 export type PrometeoAPILoginResponse =
   | PrometeoAPISuccessfulLoginResponse
+  | PrometeoAPIIncompleteLoginResponse
   | PrometeoAPIErrorLoginResponse;
 
 export interface PrometeoAPISuccessfulLogoutResponse {

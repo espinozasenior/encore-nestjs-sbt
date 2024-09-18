@@ -1,5 +1,6 @@
 import { api, type Header } from "encore.dev/api";
 
+import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
 import applicationContext from "../applicationContext";
 import type { Supplier } from "./types/supplier";
 
@@ -20,11 +21,7 @@ export const getSuppliers = api(
 // ! restrict access to internal level
 export const login = api(
   { expose: true, method: "POST", path: "/third-party/prometeo/login" },
-  async (payload: {
-    provider: string;
-    username: string;
-    password: string;
-  }): Promise<{ key: string }> => {
+  async (payload: PrometeoAPILoginRequestBody): Promise<{ key: string }> => {
     const { prometeoService } = await applicationContext;
 
     const { key } = await prometeoService.login(payload);
