@@ -37,11 +37,12 @@
   ],
   "scripts": {
     "prepare": "husky",
-    "start": "npm run prisma && encore run",
-    "prisma": "npx prisma migrate dev --name init --schema prisma/schema-mongo.prisma; npx prisma migrate dev --name init --schema prisma/schema-psql.prisma",
-    "prisma:migrate:dev": "npx prisma migrate dev --skip-seed --schema prisma/schema-mongo.prisma",
+    "start": "npm run postinstall && encore run",
+    "prisma": "npx prisma db push --schema prisma/schema-mongo.prisma; npx prisma migrate dev --name init --schema prisma/schema-psql.prisma",
+    "prisma:migrate:dev": "npx prisma migrate dev --skip-seed --schema prisma/schema-psql.prisma",
     "start:migrate:prod": "npx prisma migrate deploy && npm run start",
-    "prisma:push": "npx prisma db push",
-    "prisma:seed": "npx prisma db seed"
+    "prisma:push": "npx prisma db push --schema prisma/schema-mongo.prisma; npx prisma db push --schema prisma/schema-psql.prisma",
+    "prisma:seed": "npx prisma db seed",
+    "postinstall": "npx prisma generate --schema prisma/schema-mongo.prisma; npx prisma generate --schema prisma/schema-psql.prisma"
   }
 }

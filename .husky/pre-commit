@@ -1,5 +1,7 @@
 #!/bin/sh
 
+rm -rf ./prisma/generated
+
 export PATH="$PATH:/usr/local/opt/node@20/bin"
 
 target_directories="./lib ./services ./prisma"
