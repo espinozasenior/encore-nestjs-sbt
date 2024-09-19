@@ -27,6 +27,12 @@ export const login = api(
 
     const { key } = await prometeoService.login(payload);
 
+    if (key.length !== 32) {
+      log.warn(
+        "generated Prometeo API session key is not 32 characters long, some anomalies may occur!",
+      );
+    }
+
     return { key };
   },
 );
