@@ -1,11 +1,13 @@
 import { api, type Header } from "encore.dev/api";
 import log from "encore.dev/log";
 
+import type { IGetClientsResponse } from "./interfaces/get-clients-response.interface";
 import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
 import type { UserBankAccount } from "./types/user-account";
 import applicationContext from "../applicationContext";
 import type { Supplier } from "./types/supplier";
 import {
+  validateGetClientsPayload,
   validateListUserAccountsPayload,
   validateLoginPayload,
   validateLogoutPayload,
@@ -20,6 +22,22 @@ export const getSuppliers = api(
     const { prometeoService } = await applicationContext;
 
     const data = await prometeoService.getSuppliers();
+
+    return { data };
+  },
+);
+
+export const getClients = api(
+  { expose: true, method: "GET", path: "/third-party/prometeo/clients" },
+  async (payload: {
+    key: Header<"X-Prometeo-Session-Key">;
+  }): Promise<IGetClientsResponse> => {
+    const { prometeoService } = await applicationContext;
+
+    const apiError = validateGetClientsPayload(payload);
+    if (apiError) throw apiError;
+
+    const data = await prometeoService.getClients(payload);
 
     return { data };
   },

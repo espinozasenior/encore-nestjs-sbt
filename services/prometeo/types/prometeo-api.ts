@@ -8,7 +8,7 @@ export interface PrometeoAPILoginRequestBody {
   otp?: string;
 }
 
-export interface PrometeoGenericErrorResponse {
+export interface PrometeoAPIGenericErrorResponse {
   status: "error";
   message: string & {};
 }
@@ -25,11 +25,21 @@ export interface PrometeoAPIErrorWrongCredentialsResponse {
 export type PrometeoAPIErrorLoginResponse =
   | PrometeoAPIErrorWrongCredentialsResponse
   | PrometeoAPIErrorUnathorizedProviderResponse
-  | PrometeoGenericErrorResponse;
+  | PrometeoAPIGenericErrorResponse;
 
 export interface PrometeoAPIErrorInvalidKeyResponse {
   status: "error";
   message: "Invalid key";
+}
+
+export interface PrometeoAPIErrorMissingAPIKeyResponse {
+  status: "error";
+  message: "Missing API key";
+}
+
+export interface PrometeoAPIErrorAPIKeyNotFoundResponse {
+  status: "error";
+  message: "Key not Found";
 }
 
 export interface PrometeoAPIIncompleteLoginResponse {
@@ -63,3 +73,27 @@ export interface PrometeoAPISuccessfulListUserAccountsResponse {
 export type PrometeoAPIListUserAccountsResponse =
   | PrometeoAPISuccessfulListUserAccountsResponse
   | PrometeoAPIErrorInvalidKeyResponse;
+
+/**
+ * URL: https://banking.prometeoapi.net/client/
+ *
+ * Get clients
+ */
+export interface PrometeoAPIGetClientsPayload {
+  key: string;
+}
+
+export interface PrometeoAPIGetClientsSuccessfulResponse {
+  status: "success";
+  clients: { [key: string]: string };
+}
+
+export type PrometeoAPIGetClientsErrorResponse =
+  | PrometeoAPIErrorInvalidKeyResponse
+  | PrometeoAPIErrorMissingAPIKeyResponse
+  | PrometeoAPIErrorAPIKeyNotFoundResponse
+  | PrometeoAPIGenericErrorResponse;
+
+export type PrometeoAPIGetClientsResponse =
+  | PrometeoAPIGetClientsSuccessfulResponse
+  | PrometeoAPIGetClientsErrorResponse;

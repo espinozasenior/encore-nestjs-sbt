@@ -10,13 +10,16 @@ import type {
   PrometeoAPISuccessfulListUserAccountsResponse,
   PrometeoAPIListUserAccountsResponse,
   PrometeoAPISuccessfulLoginResponse,
+  PrometeoAPIIncompleteLoginResponse,
+  PrometeoAPIErrorLoginResponse,
+  PrometeoAPIGetClientsResponse,
+  PrometeoAPIGetClientsPayload,
   PrometeoAPILoginRequestBody,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
-  PrometeoAPIErrorLoginResponse,
-  PrometeoAPIIncompleteLoginResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
+import type { Client } from "./types/client";
 import { sleep } from "@/lib/thread";
 
 /**
@@ -404,5 +407,72 @@ export class PrometeoService {
 
       throw APIError.unavailable("cannot list user accounts");
     }
+  }
+
+  private async fetchClients(
+    { key }: PrometeoAPIGetClientsPayload,
+    config?: PrometeoRequestConfig,
+  ): Promise<PrometeoAPIGetClientsResponse> {
+    const queryParams = new URLSearchParams({ key });
+
+    const url = `${prometeoApiUrl()}/client/?${queryParams}`;
+
+    const requestInit: RequestInit = {
+      method: "GET",
+      headers: { Accept: "application/json", "X-API-Key": prometeoApiKey() },
+    };
+
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const faultTolerantGetClients = async (
+      retries = 0,
+      backoff = 100,
+    ): Promise<PrometeoAPIGetClientsResponse> => {
+      const response = await fetch(url, requestInit);
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          throw APIError.deadlineExceeded("cannot get clients");
+        }
+
+        if (response.status === 502) {
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faultTolerantGetClients(retries + 1, nextBackoff);
+        }
+
+        const text = await response.text();
+
+        throw new Error(
+          `request failed with status code ${response.status}: ${text}`,
+        );
+      }
+
+      const data = await response.json();
+
+      return data as PrometeoAPIGetClientsResponse;
+    };
+
+    return await faultTolerantGetClients();
+  }
+
+  async getClients(
+    payload: PrometeoAPIGetClientsPayload,
+    config?: PrometeoRequestConfig,
+  ): Promise<Client[]> {
+    const result = await this.fetchClients(payload, config);
+
+    if (result.status === "success") {
+      const results: Array<Client> = [];
+
+      for (const id in result.clients) {
+        const name = result.clients[id];
+
+        results.push({ id, name });
+      }
+
+      return results;
+    }
+
+    return [];
   }
 }
