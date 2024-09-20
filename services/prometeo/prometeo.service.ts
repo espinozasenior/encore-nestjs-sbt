@@ -66,17 +66,37 @@ export class PrometeoService {
     });
   }
 
+  /**
+   * @description This is a helper function that returns a RequestInit object ready to be used against the Prometeo API.
+   */
+  private getPrometeoRequestInit(
+    method: string,
+    payload?: {
+      additionalHeaders?: HeadersInit;
+      body?: BodyInit;
+    },
+  ): RequestInit {
+    const { additionalHeaders, body } = payload || {};
+
+    return {
+      method,
+      headers: {
+        Accept: "application/json",
+        "X-API-Key": prometeoApiKey(),
+        ...additionalHeaders,
+      },
+      body,
+    };
+  }
+
   private async getProvidersList(): Promise<{
     status: string;
     providers: IListSuppliersItemDto[];
   }> {
-    const response = await fetch(`${prometeoApiUrl()}/provider/`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "X-API-Key": prometeoApiKey(),
-      },
-    });
+    const response = await fetch(
+      `${prometeoApiUrl()}/provider/`,
+      this.getPrometeoRequestInit("GET"),
+    );
 
     const data = await response.json();
 
@@ -87,13 +107,10 @@ export class PrometeoService {
     status: string;
     provider: Supplier;
   }> {
-    const response = await fetch(`${prometeoApiUrl()}/provider/${code}/`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "X-API-Key": prometeoApiKey(),
-      },
-    });
+    const response = await fetch(
+      `${prometeoApiUrl()}/provider/${code}/`,
+      this.getPrometeoRequestInit("GET"),
+    );
 
     if (!response.ok) {
       const text = await response.text();
@@ -222,15 +239,15 @@ export class PrometeoService {
       if (payload.type) bodyParams.append("type", payload.type);
       if (payload.otp) bodyParams.append("otp", payload.otp);
 
-      const response = await fetch(`${prometeoApiUrl()}/login/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Accept: "application/json",
-          "X-API-Key": prometeoApiKey(),
-        },
-        body: bodyParams.toString(),
-      });
+      const response = await fetch(
+        `${prometeoApiUrl()}/login/`,
+        this.getPrometeoRequestInit("POST", {
+          additionalHeaders: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: bodyParams.toString(),
+        }),
+      );
 
       if (!response.ok) {
         if (retries >= maxAttempts) {
@@ -301,10 +318,7 @@ export class PrometeoService {
     const queryParams = new URLSearchParams({ key });
     const url = `${prometeoApiUrl()}/logout/?${queryParams}`;
 
-    const response = await fetch(url, {
-      method: "GET", // weird design
-      headers: { "X-API-Key": prometeoApiKey() },
-    });
+    const response = await fetch(url, this.getPrometeoRequestInit("GET"));
 
     if (!response.ok) {
       const text = await response.text();
@@ -338,13 +352,7 @@ export class PrometeoService {
       retries = 0,
       backoff = 100,
     ) => {
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "X-API-Key": prometeoApiKey(),
-        },
-      });
+      const response = await fetch(url, this.getPrometeoRequestInit("GET"));
 
       if (!response.ok) {
         if (retries >= maxAttempts) {
@@ -417,18 +425,13 @@ export class PrometeoService {
 
     const url = `${prometeoApiUrl()}/client/?${queryParams}`;
 
-    const requestInit: RequestInit = {
-      method: "GET",
-      headers: { Accept: "application/json", "X-API-Key": prometeoApiKey() },
-    };
-
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
     const faultTolerantGetClients = async (
       retries = 0,
       backoff = 100,
     ): Promise<PrometeoAPIGetClientsResponse> => {
-      const response = await fetch(url, requestInit);
+      const response = await fetch(url, this.getPrometeoRequestInit("GET"));
       if (!response.ok) {
         if (retries >= maxAttempts) {
           throw APIError.deadlineExceeded("cannot get clients");
