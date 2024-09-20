@@ -12,6 +12,7 @@ import {
   validateLoginPayload,
   validateLogoutPayload,
 } from "./validators/prometeo-api";
+import type { LoginResponse } from "./types/response";
 
 // If for any reason, the client will store the Prometeo API's session key,
 // the header to pass it is "X-Prometeo-Session-Key"
@@ -46,7 +47,7 @@ export const getClients = api(
 // ! restrict access to internal level
 export const login = api(
   { expose: true, method: "POST", path: "/third-party/prometeo/login" },
-  async (payload: PrometeoAPILoginRequestBody): Promise<{ key: string }> => {
+  async (payload: PrometeoAPILoginRequestBody): Promise<LoginResponse> => {
     log.debug(
       `'${payload.username}' is logging in to Prometeo API using provider '${payload.provider}'...`,
     );
@@ -65,15 +66,15 @@ export const login = api(
 
     log.debug("payload is valid, logging in...");
 
-    const { key } = await prometeoService.login(payload);
+    const result = await prometeoService.login(payload);
 
-    if (key.length !== 32) {
+    if (result.session.key.length !== 32) {
       log.warn(
         "generated Prometeo API session key is not 32 characters long, some anomalies may occur!",
       );
     }
 
-    return { key };
+    return result;
   },
 );
 

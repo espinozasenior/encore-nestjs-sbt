@@ -42,19 +42,44 @@ export interface PrometeoAPIErrorAPIKeyNotFoundResponse {
   message: "Key not Found";
 }
 
-export interface PrometeoAPIIncompleteLoginResponse {
-  status: "interaction_required";
-  context: string;
-}
-
+/**
+ * URL: https://banking.prometeoapi.net/login/
+ *
+ * Login
+ * https://docs.prometeoapi.com/reference/login
+ */
 export interface PrometeoAPISuccessfulLoginResponse {
   status: "logged_in";
   key: string;
 }
 
-export type PrometeoAPILoginResponse =
+export interface PrometeoAPISelectClientResponse {
+  status: "select_client";
+  key: string;
+}
+
+export interface PrometeoAPIRequiresPersonalQuestionResponse {
+  status: "interaction_required";
+  field: "personal_questions";
+  context: string;
+  key: string;
+}
+
+export interface PrometeoAPIRequiresOTPResponse {
+  status: "interaction_required";
+  field: "otp";
+  context: string;
+  key: string;
+}
+
+export type PrometeoAPILoginAcceptableResponse =
   | PrometeoAPISuccessfulLoginResponse
-  | PrometeoAPIIncompleteLoginResponse
+  | PrometeoAPISelectClientResponse
+  | PrometeoAPIRequiresPersonalQuestionResponse
+  | PrometeoAPIRequiresOTPResponse;
+
+export type PrometeoAPILoginResponse =
+  | PrometeoAPILoginAcceptableResponse
   | PrometeoAPIErrorLoginResponse;
 
 export interface PrometeoAPISuccessfulLogoutResponse {

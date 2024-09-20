@@ -6,11 +6,11 @@ import { Redis } from "ioredis";
 
 import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
 import type { UserBankAccount } from "./types/user-account";
+import type { LoginResponse } from "./types/response";
 import type {
   PrometeoAPISuccessfulListUserAccountsResponse,
   PrometeoAPIListUserAccountsResponse,
   PrometeoAPISuccessfulLoginResponse,
-  PrometeoAPIIncompleteLoginResponse,
   PrometeoAPIGetClientsErrorResponse,
   PrometeoAPIErrorLoginResponse,
   PrometeoAPIGetClientsResponse,
@@ -18,6 +18,7 @@ import type {
   PrometeoAPILoginRequestBody,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
+  PrometeoAPILoginAcceptableResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import type { Client } from "./types/client";
@@ -219,10 +220,10 @@ export class PrometeoService {
     return suppliers;
   }
 
-  async login(
+  private async doLogin(
     payload: PrometeoAPILoginRequestBody,
     config?: Partial<PrometeoRequestConfig>,
-  ): Promise<PrometeoAPISuccessfulLoginResponse> {
+  ): Promise<PrometeoAPILoginResponse> {
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
     const faultTolerantLogin = async (
@@ -279,12 +280,17 @@ export class PrometeoService {
 
       const data = await response.json();
 
-      return data as
-        | PrometeoAPISuccessfulLoginResponse
-        | PrometeoAPIIncompleteLoginResponse;
+      return data as PrometeoAPILoginResponse;
     };
 
-    const result = await faultTolerantLogin();
+    return await faultTolerantLogin();
+  }
+
+  async login(
+    payload: PrometeoAPILoginRequestBody,
+    config?: PrometeoRequestConfig,
+  ): Promise<LoginResponse> {
+    const result = await this.doLogin(payload, config);
 
     if (result.status === "wrong_credentials") {
       throw APIError.permissionDenied("wrong credentials");
@@ -294,23 +300,53 @@ export class PrometeoService {
       if (result.message === "Unauthorized provider") {
         throw APIError.permissionDenied("unauthorized provider");
       }
-
       log.warn("unknown API error, we can't return a correct diagnostic");
-
       throw APIError.internal(
         "unexpected error, contact with an administrator",
       );
     }
 
-    // it could be 2XX but we still need to check the status :)))
-    if (result.status === "interaction_required") {
-      // they never explain the purpose of this
-      log.debug("context is...", result.context);
-
-      throw APIError.permissionDenied("interaction required");
+    if (result.status === "logged_in") {
+      return {
+        session: {
+          key: result.key,
+          requires: "nothing",
+        },
+      };
     }
 
-    return result;
+    if (result.status === "select_client") {
+      const clients = await this.getClients({ key: result.key });
+
+      return {
+        session: {
+          key: result.key,
+          requires: "specify_client",
+        },
+        clients,
+      };
+    }
+
+    if (result.status === "interaction_required") {
+      if (result.field === "otp") {
+        return {
+          session: {
+            key: result.key,
+            requires: "otp_code",
+          },
+        };
+      }
+
+      if (result.field === "personal_questions") {
+        throw APIError.unimplemented(
+          "you need to answer a personal question to continue but is not supported yet",
+        );
+      }
+    }
+
+    log.error("something is off with the Prometeo API .:", result);
+
+    throw APIError.internal("can not complete log-in process");
   }
 
   async logout(key: string): Promise<{
