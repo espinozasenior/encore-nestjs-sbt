@@ -13,6 +13,8 @@ import type {
   PrometeoAPILoginRequestBody,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
+  PrometeoAPIErrorLoginResponse,
+  PrometeoAPIIncompleteLoginResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import { sleep } from "@/lib/thread";
@@ -234,25 +236,36 @@ export class PrometeoService {
           return await faultTolerantLogin(retries + 1, nextBackoff);
         }
 
-        const text = await response.text();
+        const data = (await response.json()) as PrometeoAPIErrorLoginResponse;
+        log.debug(`login failed with http status ${response.status}: ${data}`);
 
-        if (status === 403 && text.includes("wrong_credentials")) {
-          log.warn("login failed with status 403...");
-
-          throw APIError.permissionDenied("wrong credentials");
-        }
-
-        // TODO: provide a more deep error analysis!
-        // ! don't expose error
-        throw new Error(`request failed with status code ${status}: ${text}`);
+        return data;
       }
 
       const data = await response.json();
 
-      return data as PrometeoAPILoginResponse;
+      return data as
+        | PrometeoAPISuccessfulLoginResponse
+        | PrometeoAPIIncompleteLoginResponse;
     };
 
     const result = await faultTolerantLogin();
+
+    if (result.status === "wrong_credentials") {
+      throw APIError.permissionDenied("wrong credentials");
+    }
+
+    if (result.status === "error") {
+      if (result.message === "Unauthorized provider") {
+        throw APIError.permissionDenied("unauthorized provider");
+      }
+
+      log.warn("unknown API error, we can't return a correct diagnostic");
+
+      throw APIError.internal(
+        "unexpected error, contact with an administrator",
+      );
+    }
 
     // it could be 2XX but we still need to check the status :)))
     if (result.status === "interaction_required") {
@@ -260,20 +273,6 @@ export class PrometeoService {
       log.debug("context is...", result.context);
 
       throw APIError.permissionDenied("interaction required");
-    }
-
-    if (result.status === "error") {
-      if (result.message.includes("unknown provider")) {
-        const { provider } = payload;
-
-        log.debug(`requester has passed an unknown provider...!: ${provider}`);
-
-        throw APIError.invalidArgument("unknown provider");
-      }
-
-      log.error(`login failed with unexpected error: ${result}`);
-
-      throw APIError.internal("unexpected error");
     }
 
     return result;

@@ -8,10 +8,24 @@ export interface PrometeoAPILoginRequestBody {
   otp?: string;
 }
 
-export interface PrometeoAPIErrorLoginResponse {
+export interface PrometeoGenericErrorResponse {
   status: "error";
-  message: string;
+  message: string & {};
 }
+
+export interface PrometeoAPIErrorUnathorizedProviderResponse {
+  status: "error";
+  message: "Unauthorized provider";
+}
+
+export interface PrometeoAPIErrorWrongCredentialsResponse {
+  status: "wrong_credentials";
+}
+
+export type PrometeoAPIErrorLoginResponse =
+  | PrometeoAPIErrorWrongCredentialsResponse
+  | PrometeoAPIErrorUnathorizedProviderResponse
+  | PrometeoGenericErrorResponse;
 
 export interface PrometeoAPIErrorInvalidKeyResponse {
   status: "error";
