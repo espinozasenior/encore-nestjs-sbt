@@ -47,13 +47,23 @@ export const getClients = api(
 export const login = api(
   { expose: true, method: "POST", path: "/third-party/prometeo/login" },
   async (payload: PrometeoAPILoginRequestBody): Promise<{ key: string }> => {
+    log.debug(
+      `'${payload.username}' is logging in to Prometeo API using provider '${payload.provider}'...`,
+    );
+
     const { prometeoService } = await applicationContext;
+
+    log.debug("retrieving list of available suppliers to validate the payload");
 
     const suppliers = await prometeoService.getSuppliers();
     const supplierNames = suppliers.map((s) => s.name);
 
+    log.debug("validating payload...");
+
     const apiError = validateLoginPayload(payload, supplierNames);
     if (apiError) throw apiError;
+
+    log.debug("payload is valid, logging in...");
 
     const { key } = await prometeoService.login(payload);
 
