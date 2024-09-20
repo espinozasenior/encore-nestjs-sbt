@@ -11,6 +11,7 @@ import type {
   PrometeoAPIListUserAccountsResponse,
   PrometeoAPISuccessfulLoginResponse,
   PrometeoAPIIncompleteLoginResponse,
+  PrometeoAPIGetClientsErrorResponse,
   PrometeoAPIErrorLoginResponse,
   PrometeoAPIGetClientsResponse,
   PrometeoAPIGetClientsPayload,
@@ -444,11 +445,23 @@ export class PrometeoService {
         }
 
         const text = await response.text();
+        const data = JSON.parse(text);
 
-        throw new Error(
+        log.debug(
           `request failed with status code ${response.status}: ${text}`,
         );
+
+        return data as PrometeoAPIGetClientsErrorResponse;
       }
+
+      // return {
+      //   status: "success",
+      //   clients: {
+      //     "FIC-02412222": "FIDEICOMISO CONSORCIO PUENTES FC",
+      //     "FIC-02501212": "FIDEICOMISO PEÑAROL",
+      //     "FIC-00021244": "FIDEICOMISO CARE TEST",
+      //   },
+      // };
 
       const data = await response.json();
 
@@ -462,20 +475,47 @@ export class PrometeoService {
     payload: PrometeoAPIGetClientsPayload,
     config?: PrometeoRequestConfig,
   ): Promise<Client[]> {
-    const result = await this.fetchClients(payload, config);
+    let result: PrometeoAPIGetClientsResponse;
 
-    if (result.status === "success") {
-      const results: Array<Client> = [];
+    try {
+      result = await this.fetchClients(payload, config);
+    } catch (error) {
+      if (error instanceof APIError) throw error;
 
-      for (const id in result.clients) {
-        const name = result.clients[id];
+      log.error(error, "[internal] error getting clients");
 
-        results.push({ id, name });
-      }
-
-      return results;
+      throw APIError.internal("something went wrong");
     }
 
-    return [];
+    if (result.status === "error") {
+      if (
+        result.message === "Missing API key" ||
+        result.message === "Key not Found"
+      ) {
+        log.error(
+          "Prometeo API key is missing or invalid! Modify it in Encore's Dashboard!",
+        );
+
+        throw APIError.internal("something went wrong");
+      }
+
+      if (result.message === "Invalid key") {
+        throw APIError.permissionDenied(
+          "Prometeo API key is invalid or expired",
+        );
+      }
+
+      return [];
+    }
+
+    const results: Array<Client> = [];
+
+    for (const id in result.clients) {
+      const name = result.clients[id];
+
+      results.push({ id, name });
+    }
+
+    return results;
   }
 }
