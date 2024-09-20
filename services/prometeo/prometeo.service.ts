@@ -19,6 +19,20 @@ import type {
 import type { Supplier } from "./types/supplier";
 import { sleep } from "@/lib/thread";
 
+/**
+ * Maybe I'd like to remember why I'm doing this!
+ * Because...
+ *
+ * - We want control over the data that is going in and out
+ * - We don't want our API key to be exposed
+ * - We want to link the streaming data to the user's account
+ * - To cache the data in order to make costs lower
+ * - Improve it to be more fault tolerant
+ * - Validate the payload before sending it to Prometeo
+ * - Rate limit the requests
+ * - Make the API more easy to use 'cause it is a pain to use
+ */
+
 const prometeoApiUrl = secret("PrometeoApiUrl");
 const prometeoApiKey = secret("PrometeoApiKey");
 const redisUsername = secret("RedisUsername");
