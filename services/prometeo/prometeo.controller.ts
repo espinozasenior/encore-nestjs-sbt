@@ -1,9 +1,15 @@
 import { api, type Header } from "encore.dev/api";
+import log from "encore.dev/log";
 
 import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
 import type { UserBankAccount } from "./types/user-account";
 import applicationContext from "../applicationContext";
 import type { Supplier } from "./types/supplier";
+import {
+  validateListUserAccountsPayload,
+  validateLoginPayload,
+  validateLogoutPayload,
+} from "./validators/prometeo-api";
 
 // If for any reason, the client will store the Prometeo API's session key,
 // the header to pass it is "X-Prometeo-Session-Key"
@@ -25,7 +31,19 @@ export const login = api(
   async (payload: PrometeoAPILoginRequestBody): Promise<{ key: string }> => {
     const { prometeoService } = await applicationContext;
 
+    const suppliers = await prometeoService.getSuppliers();
+    const supplierNames = suppliers.map((s) => s.name);
+
+    const apiError = validateLoginPayload(payload, supplierNames);
+    if (apiError) throw apiError;
+
     const { key } = await prometeoService.login(payload);
+
+    if (key.length !== 32) {
+      log.warn(
+        "generated Prometeo API session key is not 32 characters long, some anomalies may occur!",
+      );
+    }
 
     return { key };
   },
@@ -37,6 +55,9 @@ export const logout = api(
   async (payload: { key: Header<"X-Prometeo-Session-Key"> }): Promise<{
     success: boolean;
   }> => {
+    const apiError = validateLogoutPayload(payload);
+    if (apiError) throw apiError;
+
     const { prometeoService } = await applicationContext;
 
     const { success } = await prometeoService.logout(payload.key);
@@ -50,6 +71,9 @@ export const listUserAccounts = api(
   async (payload: { key: Header<"X-Prometeo-Session-Key"> }): Promise<{
     data: UserBankAccount[];
   }> => {
+    const apiError = validateListUserAccountsPayload(payload);
+    if (apiError) throw apiError;
+
     const { prometeoService } = await applicationContext;
 
     const data = await prometeoService.listUserAccounts(payload.key);
