@@ -22,7 +22,11 @@ export const getSuppliers = api(
   async (): Promise<{ data: Supplier[] }> => {
     const { prometeoService } = await applicationContext;
 
+    log.debug("retrieving suppliers...");
+
     const data = await prometeoService.getSuppliers();
+
+    log.debug(`${data.length} suppliers retrieved`);
 
     return { data };
   },
