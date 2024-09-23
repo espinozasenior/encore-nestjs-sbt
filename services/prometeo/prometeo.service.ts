@@ -91,7 +91,7 @@ export class PrometeoService {
     };
   }
 
-  private async getProvidersList(): Promise<{
+  private async doGetProvidersList(): Promise<{
     status: string;
     providers: IListSuppliersItemDto[];
   }> {
@@ -105,7 +105,7 @@ export class PrometeoService {
     return data as { status: string; providers: IListSuppliersItemDto[] };
   }
 
-  private async getProviderDetails(code: string): Promise<{
+  private async doGetProviderDetails(code: string): Promise<{
     status: string;
     provider: Supplier;
   }> {
@@ -128,11 +128,11 @@ export class PrometeoService {
     return data as { status: string; provider: Supplier };
   }
 
-  private async getDetailedProviders(
+  private async doGetDetailedProviders(
     countryCode = "PE",
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<Supplier[]> {
-    const { providers } = await this.getProvidersList();
+    const { providers } = await this.doGetProvidersList();
 
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
@@ -142,7 +142,7 @@ export class PrometeoService {
       backoff = 100,
     ): Promise<Supplier> => {
       try {
-        const { provider } = await this.getProviderDetails(code);
+        const { provider } = await this.doGetProviderDetails(code);
 
         if (attempt !== 0) {
           log.debug(
@@ -208,7 +208,7 @@ export class PrometeoService {
       return JSON.parse(result) as Supplier[];
     }
 
-    const suppliers = await this.getDetailedProviders(countryCode, config);
+    const suppliers = await this.doGetDetailedProviders(countryCode, config);
 
     try {
       const value = JSON.stringify(suppliers);
@@ -376,7 +376,7 @@ export class PrometeoService {
     };
   }
 
-  private async fetchUserAccounts(
+  private async doListUserAccounts(
     key: string,
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<PrometeoAPISuccessfulListUserAccountsResponse> {
@@ -442,7 +442,7 @@ export class PrometeoService {
 
   async listUserAccounts(key: string): Promise<UserBankAccount[]> {
     try {
-      const { accounts } = await this.fetchUserAccounts(key);
+      const { accounts } = await this.doListUserAccounts(key);
 
       return accounts;
     } catch (error) {
@@ -454,7 +454,7 @@ export class PrometeoService {
     }
   }
 
-  private async fetchClients(
+  private async doGetClients(
     { key }: PrometeoAPIGetClientsPayload,
     config?: PrometeoRequestConfig,
   ): Promise<PrometeoAPIGetClientsResponse> {
@@ -514,7 +514,7 @@ export class PrometeoService {
     let result: PrometeoAPIGetClientsResponse;
 
     try {
-      result = await this.fetchClients(payload, config);
+      result = await this.doGetClients(payload, config);
     } catch (error) {
       if (error instanceof APIError) throw error;
 
