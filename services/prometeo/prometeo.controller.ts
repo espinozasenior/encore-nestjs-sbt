@@ -17,40 +17,9 @@ import type { LoginResponse } from "./types/response";
 // If for any reason, the client will store the Prometeo API's session key,
 // the header to pass it is "X-Prometeo-Session-Key"
 
-export const getSuppliers = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/suppliers" },
-  async (): Promise<{ data: Supplier[] }> => {
-    const { prometeoService } = await applicationContext;
-
-    log.debug("retrieving suppliers...");
-
-    const data = await prometeoService.getSuppliers();
-
-    log.debug(`${data.length} suppliers retrieved`);
-
-    return { data };
-  },
-);
-
-export const getClients = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/clients" },
-  async (payload: {
-    key: Header<"X-Prometeo-Session-Key">;
-  }): Promise<IGetClientsResponse> => {
-    const { prometeoService } = await applicationContext;
-
-    const apiError = validateGetClientsPayload(payload);
-    if (apiError) throw apiError;
-
-    const data = await prometeoService.getClients(payload);
-
-    return { data };
-  },
-);
-
 // ! restrict access to internal level
 export const login = api(
-  { expose: true, method: "POST", path: "/third-party/prometeo/login" },
+  { expose: true, method: "POST", path: "/third-party/prometeo/auth/login" },
   async (payload: PrometeoAPILoginRequestBody): Promise<LoginResponse> => {
     log.debug(
       `'${payload.username}' is logging in to Prometeo API using provider '${payload.provider}'...`,
@@ -84,7 +53,7 @@ export const login = api(
 
 // ! restrict access to internal level
 export const logout = api(
-  { expose: true, method: "POST", path: "/third-party/prometeo/logout" },
+  { expose: true, method: "POST", path: "/third-party/prometeo/auth/logout" },
   async (payload: { key: Header<"X-Prometeo-Session-Key"> }): Promise<{
     success: boolean;
   }> => {
@@ -110,6 +79,37 @@ export const listUserAccounts = api(
     const { prometeoService } = await applicationContext;
 
     const data = await prometeoService.listUserAccounts(payload.key);
+
+    return { data };
+  },
+);
+
+export const getSuppliers = api(
+  { expose: true, method: "GET", path: "/third-party/prometeo/suppliers" },
+  async (): Promise<{ data: Supplier[] }> => {
+    const { prometeoService } = await applicationContext;
+
+    log.debug("retrieving suppliers...");
+
+    const data = await prometeoService.getSuppliers();
+
+    log.debug(`${data.length} suppliers retrieved`);
+
+    return { data };
+  },
+);
+
+export const getClients = api(
+  { expose: true, method: "GET", path: "/third-party/prometeo/clients" },
+  async (payload: {
+    key: Header<"X-Prometeo-Session-Key">;
+  }): Promise<IGetClientsResponse> => {
+    const { prometeoService } = await applicationContext;
+
+    const apiError = validateGetClientsPayload(payload);
+    if (apiError) throw apiError;
+
+    const data = await prometeoService.getClients(payload);
 
     return { data };
   },
