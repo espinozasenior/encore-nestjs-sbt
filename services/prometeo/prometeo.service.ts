@@ -10,7 +10,6 @@ import type { LoginResponse } from "./types/response";
 import type {
   PrometeoAPISuccessfulListUserAccountsResponse,
   PrometeoAPIListUserAccountsResponse,
-  PrometeoAPISuccessfulLoginResponse,
   PrometeoAPIGetClientsErrorResponse,
   PrometeoAPIErrorLoginResponse,
   PrometeoAPIGetClientsResponse,
@@ -18,7 +17,6 @@ import type {
   PrometeoAPILoginRequestBody,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
-  PrometeoAPILoginAcceptableResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import type { Client } from "./types/client";
