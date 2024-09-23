@@ -3,7 +3,7 @@ import {
   type User as UserModel,
   type Prisma,
   PrismaClient,
-} from "./../../prisma/generated/psql-client";
+} from "@prisma/client";
 
 import { APIError } from "encore.dev/api";
 
