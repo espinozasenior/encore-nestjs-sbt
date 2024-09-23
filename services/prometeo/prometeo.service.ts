@@ -6,16 +6,35 @@ import { Redis } from "ioredis";
 
 import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
 import type { UserBankAccount } from "./types/user-account";
+import type { LoginResponse } from "./types/response";
 import type {
   PrometeoAPISuccessfulListUserAccountsResponse,
   PrometeoAPIListUserAccountsResponse,
-  PrometeoAPISuccessfulLoginResponse,
+  PrometeoAPIGetClientsErrorResponse,
+  PrometeoAPIErrorLoginResponse,
+  PrometeoAPIGetClientsResponse,
+  PrometeoAPIGetClientsPayload,
   PrometeoAPILoginRequestBody,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
+import type { Client } from "./types/client";
 import { sleep } from "@/lib/thread";
+
+/**
+ * Maybe I'd like to remember why I'm doing this!
+ * Because...
+ *
+ * - We want control over the data that is going in and out
+ * - We don't want our API key to be exposed
+ * - We want to link the streaming data to the user's account
+ * - To cache the data in order to make costs lower
+ * - Improve it to be more fault tolerant
+ * - Validate the payload before sending it to Prometeo
+ * - Rate limit the requests
+ * - Make the API more easy to use :))))))))
+ */
 
 const prometeoApiUrl = secret("PrometeoApiUrl");
 const prometeoApiKey = secret("PrometeoApiKey");
@@ -47,34 +66,51 @@ export class PrometeoService {
     });
   }
 
-  private async getProvidersList(): Promise<{
-    status: string;
-    providers: IListSuppliersItemDto[];
-  }> {
-    const response = await fetch(`${prometeoApiUrl()}/provider/`, {
-      method: "GET",
+  /**
+   * @description This is a helper function that returns a RequestInit object ready to be used against the Prometeo API.
+   */
+  private getPrometeoRequestInit(
+    method: string,
+    payload?: {
+      additionalHeaders?: HeadersInit;
+      body?: BodyInit;
+    },
+  ): RequestInit {
+    const { additionalHeaders, body } = payload || {};
+
+    return {
+      method,
       headers: {
         Accept: "application/json",
         "X-API-Key": prometeoApiKey(),
+        ...additionalHeaders,
       },
-    });
+      body,
+    };
+  }
+
+  private async doGetProvidersList(): Promise<{
+    status: string;
+    providers: IListSuppliersItemDto[];
+  }> {
+    const response = await fetch(
+      `${prometeoApiUrl()}/provider/`,
+      this.getPrometeoRequestInit("GET"),
+    );
 
     const data = await response.json();
 
     return data as { status: string; providers: IListSuppliersItemDto[] };
   }
 
-  private async getProviderDetails(code: string): Promise<{
+  private async doGetProviderDetails(code: string): Promise<{
     status: string;
     provider: Supplier;
   }> {
-    const response = await fetch(`${prometeoApiUrl()}/provider/${code}/`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "X-API-Key": prometeoApiKey(),
-      },
-    });
+    const response = await fetch(
+      `${prometeoApiUrl()}/provider/${code}/`,
+      this.getPrometeoRequestInit("GET"),
+    );
 
     if (!response.ok) {
       const text = await response.text();
@@ -90,11 +126,11 @@ export class PrometeoService {
     return data as { status: string; provider: Supplier };
   }
 
-  private async getDetailedProviders(
+  private async doGetDetailedProviders(
     countryCode = "PE",
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<Supplier[]> {
-    const { providers } = await this.getProvidersList();
+    const { providers } = await this.doGetProvidersList();
 
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
@@ -104,7 +140,7 @@ export class PrometeoService {
       backoff = 100,
     ): Promise<Supplier> => {
       try {
-        const { provider } = await this.getProviderDetails(code);
+        const { provider } = await this.doGetProviderDetails(code);
 
         if (attempt !== 0) {
           log.debug(
@@ -170,7 +206,7 @@ export class PrometeoService {
       return JSON.parse(result) as Supplier[];
     }
 
-    const suppliers = await this.getDetailedProviders(countryCode, config);
+    const suppliers = await this.doGetDetailedProviders(countryCode, config);
 
     try {
       const value = JSON.stringify(suppliers);
@@ -182,10 +218,10 @@ export class PrometeoService {
     return suppliers;
   }
 
-  async login(
+  private async doLogin(
     payload: PrometeoAPILoginRequestBody,
     config?: Partial<PrometeoRequestConfig>,
-  ): Promise<PrometeoAPISuccessfulLoginResponse> {
+  ): Promise<PrometeoAPILoginResponse> {
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
     const faultTolerantLogin = async (
@@ -203,15 +239,15 @@ export class PrometeoService {
       if (payload.type) bodyParams.append("type", payload.type);
       if (payload.otp) bodyParams.append("otp", payload.otp);
 
-      const response = await fetch(`${prometeoApiUrl()}/login/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Accept: "application/json",
-          "X-API-Key": prometeoApiKey(),
-        },
-        body: bodyParams.toString(),
-      });
+      const response = await fetch(
+        `${prometeoApiUrl()}/login/`,
+        this.getPrometeoRequestInit("POST", {
+          additionalHeaders: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: bodyParams.toString(),
+        }),
+      );
 
       if (!response.ok) {
         if (retries >= maxAttempts) {
@@ -234,17 +270,10 @@ export class PrometeoService {
           return await faultTolerantLogin(retries + 1, nextBackoff);
         }
 
-        const text = await response.text();
+        const data = (await response.json()) as PrometeoAPIErrorLoginResponse;
+        log.debug(`login failed with http status ${response.status}: ${data}`);
 
-        if (status === 403 && text.includes("wrong_credentials")) {
-          log.warn("login failed with status 403...");
-
-          throw APIError.permissionDenied("wrong credentials");
-        }
-
-        // TODO: provide a more deep error analysis!
-        // ! don't expose error
-        throw new Error(`request failed with status code ${status}: ${text}`);
+        return data;
       }
 
       const data = await response.json();
@@ -252,31 +281,70 @@ export class PrometeoService {
       return data as PrometeoAPILoginResponse;
     };
 
-    const result = await faultTolerantLogin();
+    return await faultTolerantLogin();
+  }
 
-    // it could be 2XX but we still need to check the status :)))
-    if (result.status === "interaction_required") {
-      // they never explain the purpose of this
-      log.debug("context is...", result.context);
+  async login(
+    payload: PrometeoAPILoginRequestBody,
+    config?: PrometeoRequestConfig,
+  ): Promise<LoginResponse> {
+    const result = await this.doLogin(payload, config);
 
-      throw APIError.permissionDenied("interaction required");
+    if (result.status === "wrong_credentials") {
+      throw APIError.permissionDenied("wrong credentials");
     }
 
     if (result.status === "error") {
-      if (result.message.includes("unknown provider")) {
-        const { provider } = payload;
-
-        log.debug(`requester has passed an unknown provider...!: ${provider}`);
-
-        throw APIError.invalidArgument("unknown provider");
+      if (result.message === "Unauthorized provider") {
+        throw APIError.permissionDenied("unauthorized provider");
       }
-
-      log.error(`login failed with unexpected error: ${result}`);
-
-      throw APIError.internal("unexpected error");
+      log.warn("unknown API error, we can't return a correct diagnostic");
+      throw APIError.internal(
+        "unexpected error, contact with an administrator",
+      );
     }
 
-    return result;
+    if (result.status === "logged_in") {
+      return {
+        session: {
+          key: result.key,
+          requires: "nothing",
+        },
+      };
+    }
+
+    if (result.status === "select_client") {
+      const clients = await this.getClients({ key: result.key });
+
+      return {
+        session: {
+          key: result.key,
+          requires: "specify_client",
+        },
+        clients,
+      };
+    }
+
+    if (result.status === "interaction_required") {
+      if (result.field === "otp") {
+        return {
+          session: {
+            key: result.key,
+            requires: "otp_code",
+          },
+        };
+      }
+
+      if (result.field === "personal_questions") {
+        throw APIError.unimplemented(
+          "you need to answer a personal question to continue but is not supported yet",
+        );
+      }
+    }
+
+    log.error("something is off with the Prometeo API .:", result);
+
+    throw APIError.internal("can not complete log-in process");
   }
 
   async logout(key: string): Promise<{
@@ -285,10 +353,7 @@ export class PrometeoService {
     const queryParams = new URLSearchParams({ key });
     const url = `${prometeoApiUrl()}/logout/?${queryParams}`;
 
-    const response = await fetch(url, {
-      method: "GET", // weird design
-      headers: { "X-API-Key": prometeoApiKey() },
-    });
+    const response = await fetch(url, this.getPrometeoRequestInit("GET"));
 
     if (!response.ok) {
       const text = await response.text();
@@ -309,7 +374,7 @@ export class PrometeoService {
     };
   }
 
-  private async fetchUserAccounts(
+  private async doListUserAccounts(
     key: string,
     config?: Partial<PrometeoRequestConfig>,
   ): Promise<PrometeoAPISuccessfulListUserAccountsResponse> {
@@ -322,13 +387,7 @@ export class PrometeoService {
       retries = 0,
       backoff = 100,
     ) => {
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "X-API-Key": prometeoApiKey(),
-        },
-      });
+      const response = await fetch(url, this.getPrometeoRequestInit("GET"));
 
       if (!response.ok) {
         if (retries >= maxAttempts) {
@@ -381,7 +440,7 @@ export class PrometeoService {
 
   async listUserAccounts(key: string): Promise<UserBankAccount[]> {
     try {
-      const { accounts } = await this.fetchUserAccounts(key);
+      const { accounts } = await this.doListUserAccounts(key);
 
       return accounts;
     } catch (error) {
@@ -391,5 +450,106 @@ export class PrometeoService {
 
       throw APIError.unavailable("cannot list user accounts");
     }
+  }
+
+  private async doGetClients(
+    { key }: PrometeoAPIGetClientsPayload,
+    config?: PrometeoRequestConfig,
+  ): Promise<PrometeoAPIGetClientsResponse> {
+    const queryParams = new URLSearchParams({ key });
+
+    const url = `${prometeoApiUrl()}/client/?${queryParams}`;
+
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const faultTolerantGetClients = async (
+      retries = 0,
+      backoff = 100,
+    ): Promise<PrometeoAPIGetClientsResponse> => {
+      const response = await fetch(url, this.getPrometeoRequestInit("GET"));
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          throw APIError.deadlineExceeded("cannot get clients");
+        }
+
+        if (response.status === 502) {
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faultTolerantGetClients(retries + 1, nextBackoff);
+        }
+
+        const text = await response.text();
+        const data = JSON.parse(text);
+
+        log.debug(
+          `request failed with status code ${response.status}: ${text}`,
+        );
+
+        return data as PrometeoAPIGetClientsErrorResponse;
+      }
+
+      // return {
+      //   status: "success",
+      //   clients: {
+      //     "FIC-02412222": "FIDEICOMISO CONSORCIO PUENTES FC",
+      //     "FIC-02501212": "FIDEICOMISO PEÑAROL",
+      //     "FIC-00021244": "FIDEICOMISO CARE TEST",
+      //   },
+      // };
+
+      const data = await response.json();
+
+      return data as PrometeoAPIGetClientsResponse;
+    };
+
+    return await faultTolerantGetClients();
+  }
+
+  async getClients(
+    payload: PrometeoAPIGetClientsPayload,
+    config?: PrometeoRequestConfig,
+  ): Promise<Client[]> {
+    let result: PrometeoAPIGetClientsResponse;
+
+    try {
+      result = await this.doGetClients(payload, config);
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "[internal] error getting clients");
+
+      throw APIError.internal("something went wrong");
+    }
+
+    if (result.status === "error") {
+      if (
+        result.message === "Missing API key" ||
+        result.message === "Key not Found"
+      ) {
+        log.error(
+          "Prometeo API key is missing or invalid! Modify it in Encore's Dashboard!",
+        );
+
+        throw APIError.internal("something went wrong");
+      }
+
+      if (result.message === "Invalid key") {
+        throw APIError.permissionDenied(
+          "Prometeo API key is invalid or expired",
+        );
+      }
+
+      return [];
+    }
+
+    const results: Array<Client> = [];
+
+    for (const id in result.clients) {
+      const name = result.clients[id];
+
+      results.push({ id, name });
+    }
+
+    return results;
   }
 }

@@ -1,6 +1,9 @@
 import { APIError } from "encore.dev/api";
 
-import type { PrometeoAPILoginRequestBody } from "../types/prometeo-api";
+import type {
+  PrometeoAPIGetClientsPayload,
+  PrometeoAPILoginRequestBody,
+} from "../types/prometeo-api";
 
 const checkNonEmptyString = (
   fieldName: string,
@@ -37,6 +40,13 @@ const checkNonEmptyString = (
 
 const checkPrometeoSessionKey = (key: string): APIError | undefined => {
   const error = checkNonEmptyString("key", key, 32, 32);
+  if (error) return error;
+};
+
+export const validateGetClientsPayload = (
+  payload: PrometeoAPIGetClientsPayload,
+): APIError | undefined => {
+  const error = checkPrometeoSessionKey(payload.key);
   if (error) return error;
 };
 
