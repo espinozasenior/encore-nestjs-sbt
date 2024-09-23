@@ -6,7 +6,7 @@ import {
   OrganizationRole,
   type Prisma,
   PrismaClient,
-} from "./../../prisma/generated/psql-client";
+} from "@prisma/client";
 
 @Injectable()
 export class OrganizationsService extends PrismaClient implements OnModuleInit {

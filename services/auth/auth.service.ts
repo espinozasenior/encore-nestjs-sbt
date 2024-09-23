@@ -6,7 +6,7 @@ import {
   verifyToken,
   type User,
 } from "@clerk/backend";
-import { PrismaClient } from "./../../prisma/generated/psql-client";
+import { PrismaClient } from "@prisma/client";
 import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
