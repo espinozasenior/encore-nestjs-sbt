@@ -542,6 +542,12 @@ export class PrometeoService {
       return [];
     }
 
+    result.clients = {
+      "FIC-02412222": "FIDEICOMISO CONSORCIO PUENTES FC",
+      "FIC-02501212": "FIDEICOMISO PEÑAROL",
+      "FIC-00021244": "FIDEICOMISO CARE TEST",
+    };
+
     const results: Array<Client> = [];
 
     for (const id in result.clients) {
