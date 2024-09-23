@@ -35,7 +35,7 @@ import { sleep } from "@/lib/thread";
  * - Improve it to be more fault tolerant
  * - Validate the payload before sending it to Prometeo
  * - Rate limit the requests
- * - Make the API more easy to use 'cause it is a pain to use
+ * - Make the API more easy to use :))))))))
  */
 
 const prometeoApiUrl = secret("PrometeoApiUrl");
