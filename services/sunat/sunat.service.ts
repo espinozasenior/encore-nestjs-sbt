@@ -1,6 +1,9 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { parse as parseHtml } from "node-html-parser";
-import { PrismaClient, type SunatProfile } from "@prisma/client";
+import {
+  PrismaClient,
+  type SunatProfile,
+} from "./../../prisma/generated/psql-client";
 import { secret } from "encore.dev/config";
 import { APIError } from "encore.dev/api";
 import { users } from "~encore/clients";
