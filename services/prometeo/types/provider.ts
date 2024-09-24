@@ -1,4 +1,4 @@
-interface SupplierAuthField {
+interface ProviderAuthField {
   name: string;
   type: "text" | "password" | "choice";
   interactive: boolean;
@@ -12,27 +12,27 @@ interface SupplierAuthField {
   }[];
 }
 
-interface SupplierBankMetadata {
+interface ProviderBankMetadata {
   code: string;
   name: string;
   logo: string;
 }
 
-interface SupplierAccountType {
+interface ProviderAccountType {
   name: string;
   label_es: string;
   label_en: string;
 }
 
-export interface Supplier {
+export interface Provider {
   name: string;
   aliases: string[];
   country: string;
-  auth_fields: SupplierAuthField[];
+  auth_fields: ProviderAuthField[];
   // endpoints_status?: any;
-  account_type: SupplierAccountType[];
+  account_type: ProviderAccountType[];
   logo: string;
-  bank: SupplierBankMetadata;
+  bank: ProviderBankMetadata;
   methods: {
     accounts: boolean;
     credit_cards: boolean;

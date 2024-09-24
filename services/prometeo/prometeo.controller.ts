@@ -8,7 +8,7 @@ import type {
   UserBankAccountMovement,
 } from "./types/user-account";
 import applicationContext from "../applicationContext";
-import type { Supplier } from "./types/supplier";
+import type { Provider } from "./types/provider";
 import {
   validateListUserAccountsPayload,
   validateSelectClientPayload,
@@ -30,14 +30,14 @@ export const login = api(
 
     const { prometeoService } = await applicationContext;
 
-    log.debug("retrieving list of available suppliers to validate the payload");
+    log.debug("retrieving list of available providers to validate the payload");
 
-    const suppliers = await prometeoService.getSuppliers();
-    const supplierNames = suppliers.map((s) => s.name);
+    const providers = await prometeoService.getProviders();
+    const providerNames = providers.map((s) => s.name);
 
     log.debug("validating payload...");
 
-    const apiError = validateLoginPayload(payload, supplierNames);
+    const apiError = validateLoginPayload(payload, providerNames);
     if (apiError) throw apiError;
 
     log.debug("payload is valid, logging in...");
@@ -116,19 +116,19 @@ export const queryUserAccountMovements = api(
 );
 
 // List all the providers that the Prometeo API supports.
-export const listSuppliers = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/suppliers" },
+export const listProviders = api(
+  { expose: true, method: "GET", path: "/third-party/prometeo/providers" },
   async (): Promise<{
     // An array with all the providers that the Prometeo API supports.
-    data: Supplier[];
+    data: Provider[];
   }> => {
     const { prometeoService } = await applicationContext;
 
-    log.debug("retrieving suppliers...");
+    log.debug("retrieving providers...");
 
-    const data = await prometeoService.getSuppliers();
+    const data = await prometeoService.getProviders();
 
-    log.debug(`${data.length} suppliers retrieved`);
+    log.debug(`${data.length} providers retrieved`);
 
     return { data };
   },
