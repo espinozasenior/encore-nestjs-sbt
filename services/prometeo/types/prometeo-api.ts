@@ -1,4 +1,4 @@
-import type { UserBankAccount } from "./user-account";
+import type { UserBankAccount, UserBankAccountMovement } from "./user-account";
 
 export interface PrometeoAPILoginRequestBody {
   provider: string;
@@ -53,19 +53,19 @@ export interface PrometeoAPISuccessfulLoginResponse {
   key: string;
 }
 
-export interface PrometeoAPISelectClientResponse {
+export interface PrometeoAPILoginSelectClientResponse {
   status: "select_client";
   key: string;
 }
 
-export interface PrometeoAPIRequiresPersonalQuestionResponse {
+export interface PrometeoAPILoginRequiresPersonalQuestionResponse {
   status: "interaction_required";
   field: "personal_questions";
   context: string;
   key: string;
 }
 
-export interface PrometeoAPIRequiresOTPResponse {
+export interface PrometeoAPILoginRequiresOTPResponse {
   status: "interaction_required";
   field: "otp";
   context: string;
@@ -74,9 +74,9 @@ export interface PrometeoAPIRequiresOTPResponse {
 
 export type PrometeoAPILoginAcceptableResponse =
   | PrometeoAPISuccessfulLoginResponse
-  | PrometeoAPISelectClientResponse
-  | PrometeoAPIRequiresPersonalQuestionResponse
-  | PrometeoAPIRequiresOTPResponse;
+  | PrometeoAPILoginSelectClientResponse
+  | PrometeoAPILoginRequiresPersonalQuestionResponse
+  | PrometeoAPILoginRequiresOTPResponse;
 
 export type PrometeoAPILoginResponse =
   | PrometeoAPILoginAcceptableResponse
@@ -122,3 +122,34 @@ export type PrometeoAPIGetClientsErrorResponse =
 export type PrometeoAPIGetClientsResponse =
   | PrometeoAPIGetClientsSuccessfulResponse
   | PrometeoAPIGetClientsErrorResponse;
+
+export type PrometeoAPISelectClientResponse =
+  | PrometeoAPISelectClientSuccessfulResponse
+  | PrometeoAPISelectClientWrongResponse
+  | PrometeoAPIErrorInvalidKeyResponse;
+
+export interface PrometeoAPISelectClientSuccessfulResponse {
+  status: "success";
+}
+
+export interface PrometeoAPISelectClientWrongResponse {
+  status: "error";
+  message: "wrong_client";
+}
+
+export interface PrometeoAPIListUserAccountMovementsPayload {
+  key: string;
+  account: string;
+  currency: string;
+  date_start: string;
+  date_end: string;
+}
+
+export type PrometeoAPIListUserAccountMovementsResponse =
+  | PrometeoAPIListUserAccountMovementsSuccessfulResponse
+  | PrometeoAPIErrorInvalidKeyResponse;
+
+export interface PrometeoAPIListUserAccountMovementsSuccessfulResponse {
+  status: "success";
+  movements: UserBankAccountMovement[];
+}

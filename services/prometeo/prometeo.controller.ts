@@ -3,19 +3,57 @@ import log from "encore.dev/log";
 
 import type { IGetClientsResponse } from "./interfaces/get-clients-response.interface";
 import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
-import type { UserBankAccount } from "./types/user-account";
+import type {
+  UserBankAccount,
+  UserBankAccountMovement,
+} from "./types/user-account";
 import applicationContext from "../applicationContext";
 import type { Supplier } from "./types/supplier";
 import {
-  validateGetClientsPayload,
   validateListUserAccountsPayload,
+  validateSelectClientPayload,
+  validateGetClientsPayload,
   validateLoginPayload,
   validateLogoutPayload,
+  validateListUserAccountMovementsPayload,
 } from "./validators/prometeo-api";
 import type { LoginResponse } from "./types/response";
+import { ServiceError } from "./service-errors";
 
 // If for any reason, the client will store the Prometeo API's session key,
 // the header to pass it is "X-Prometeo-Session-Key"
+
+export const selectClient = api(
+  {
+    expose: true,
+    method: "POST",
+    path: "/third-party/prometeo/select-client",
+  },
+  async (payload: {
+    key: Header<"X-Prometeo-Session-Key">;
+    client: string;
+  }): Promise<void> => {
+    const { prometeoService } = await applicationContext;
+
+    const clients = await prometeoService.getClients({ key: payload.key });
+    if (clients.length === 0) {
+      log.error("no clients found from Prometeo API! returning HTTP 500");
+      throw ServiceError.somethingWentWrong;
+    }
+
+    log.debug(`${clients.length} clients found from Prometeo API...`);
+
+    const validClients = clients.map((c) => c.id);
+
+    const apiError = validateSelectClientPayload(payload, validClients);
+    if (apiError) {
+      log.debug("request failed due to validation error...");
+      throw apiError;
+    }
+
+    await prometeoService.selectClient(payload.key, payload.client);
+  },
+);
 
 // ! restrict access to internal level
 export const login = api(
@@ -79,6 +117,38 @@ export const listUserAccounts = api(
     const { prometeoService } = await applicationContext;
 
     const data = await prometeoService.listUserAccounts(payload.key);
+
+    return { data };
+  },
+);
+
+export const listUserAccountMovements = api(
+  {
+    expose: true,
+    method: "GET",
+    path: "/third-party/prometeo/accounts/:account/movements",
+  },
+  async (payload: {
+    key: Header<"X-Prometeo-Session-Key">;
+    account: string;
+    currency: string;
+    date_start: string;
+    date_end: string;
+  }): Promise<{
+    data: UserBankAccountMovement[];
+  }> => {
+    log.debug(
+      `retrieving movements from account ${payload.account}(${payload.currency}) from ${payload.date_start} to ${payload.date_end}...`,
+    );
+
+    const apiError = validateListUserAccountMovementsPayload(payload);
+    if (apiError) throw apiError;
+
+    const { prometeoService } = await applicationContext;
+
+    const data = await prometeoService.listUserAccountMovements(payload);
+
+    log.debug(`returning ${data.length} user account movements...`);
 
     return { data };
   },

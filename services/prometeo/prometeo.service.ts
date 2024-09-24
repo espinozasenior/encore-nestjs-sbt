@@ -5,7 +5,11 @@ import log from "encore.dev/log";
 import { Redis } from "ioredis";
 
 import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
-import type { UserBankAccount } from "./types/user-account";
+import { ServiceError } from "./service-errors";
+import type {
+  UserBankAccount,
+  UserBankAccountMovement,
+} from "./types/user-account";
 import type { LoginResponse } from "./types/response";
 import type {
   PrometeoAPISuccessfulListUserAccountsResponse,
@@ -17,6 +21,9 @@ import type {
   PrometeoAPILoginRequestBody,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
+  PrometeoAPISelectClientResponse,
+  PrometeoAPIListUserAccountMovementsPayload,
+  PrometeoAPIListUserAccountMovementsResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import type { Client } from "./types/client";
@@ -253,7 +260,7 @@ export class PrometeoService {
         if (retries >= maxAttempts) {
           log.error(`login failed after ${retries} attempts`);
 
-          throw APIError.deadlineExceeded("login failed");
+          throw ServiceError.deadlineExceeded;
         }
 
         const { status } = response;
@@ -291,17 +298,15 @@ export class PrometeoService {
     const result = await this.doLogin(payload, config);
 
     if (result.status === "wrong_credentials") {
-      throw APIError.permissionDenied("wrong credentials");
+      throw ServiceError.wrongCredentials;
     }
 
     if (result.status === "error") {
       if (result.message === "Unauthorized provider") {
-        throw APIError.permissionDenied("unauthorized provider");
+        throw ServiceError.unauthorizedProvider;
       }
       log.warn("unknown API error, we can't return a correct diagnostic");
-      throw APIError.internal(
-        "unexpected error, contact with an administrator",
-      );
+      throw ServiceError.somethingWentWrong;
     }
 
     if (result.status === "logged_in") {
@@ -343,8 +348,9 @@ export class PrometeoService {
     }
 
     log.error("something is off with the Prometeo API .:", result);
+    log.error("cannot complete log-in process...");
 
-    throw APIError.internal("can not complete log-in process");
+    throw ServiceError.somethingWentWrong;
   }
 
   async logout(key: string): Promise<{
@@ -364,7 +370,7 @@ export class PrometeoService {
         "[resilience] maybe we should implement a retry mechanism here...",
       );
 
-      throw APIError.internal("unexpected error");
+      throw ServiceError.somethingWentWrong;
     }
 
     const data = (await response.json()) as PrometeoAPILogoutResponse;
@@ -393,7 +399,7 @@ export class PrometeoService {
         if (retries >= maxAttempts) {
           log.error(`login failed after ${retries} attempts`);
 
-          throw APIError.deadlineExceeded("login failed");
+          throw ServiceError.deadlineExceeded;
         }
 
         const { status } = response;
@@ -425,14 +431,12 @@ export class PrometeoService {
 
     if (result.status === "error") {
       if (result.message === "Invalid key") {
-        throw APIError.permissionDenied(
-          "Prometeo API key is invalid or expired",
-        );
+        throw ServiceError.sessionKeyInvalidOrExpired;
       }
 
       log.error(`Prometeo API error: ${result}`);
 
-      throw APIError.internal("unexpected error");
+      throw ServiceError.somethingWentWrong;
     }
 
     return result;
@@ -448,7 +452,7 @@ export class PrometeoService {
 
       log.error(error, "error listing user accounts");
 
-      throw APIError.unavailable("cannot list user accounts");
+      throw ServiceError.somethingWentWrong;
     }
   }
 
@@ -469,7 +473,9 @@ export class PrometeoService {
       const response = await fetch(url, this.getPrometeoRequestInit("GET"));
       if (!response.ok) {
         if (retries >= maxAttempts) {
-          throw APIError.deadlineExceeded("cannot get clients");
+          log.error(`cannot get clients after ${retries} attempts`);
+
+          throw ServiceError.deadlineExceeded;
         }
 
         if (response.status === 502) {
@@ -518,7 +524,7 @@ export class PrometeoService {
 
       log.error(error, "[internal] error getting clients");
 
-      throw APIError.internal("something went wrong");
+      throw ServiceError.somethingWentWrong;
     }
 
     if (result.status === "error") {
@@ -530,17 +536,23 @@ export class PrometeoService {
           "Prometeo API key is missing or invalid! Modify it in Encore's Dashboard!",
         );
 
-        throw APIError.internal("something went wrong");
+        log.warn("Prometeo API's response was...", result);
+
+        throw ServiceError.somethingWentWrong;
       }
 
       if (result.message === "Invalid key") {
-        throw APIError.permissionDenied(
-          "Prometeo API key is invalid or expired",
-        );
+        throw ServiceError.sessionKeyInvalidOrExpired;
       }
 
       return [];
     }
+
+    result.clients = {
+      "FIC-02412222": "FIDEICOMISO CONSORCIO PUENTES FC",
+      "FIC-02501212": "FIDEICOMISO PEÑAROL",
+      "FIC-00021244": "FIDEICOMISO CARE TEST",
+    };
 
     const results: Array<Client> = [];
 
@@ -551,5 +563,167 @@ export class PrometeoService {
     }
 
     return results;
+  }
+
+  async doSelectClient(
+    key: string,
+    client: string,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<PrometeoAPISelectClientResponse> {
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const url = `${prometeoApiUrl()}/client/${client}/?key=${key}`;
+    const requestInit = this.getPrometeoRequestInit("GET");
+
+    const faulTolerantSelectClient = async (
+      retries = 0,
+      backoff = 200,
+    ): Promise<PrometeoAPISelectClientResponse> => {
+      const response = await fetch(url, requestInit);
+
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          log.error(`cannot select client after ${retries} attempts`);
+
+          throw ServiceError.deadlineExceeded;
+        }
+
+        const { status } = response;
+
+        if (status === 502) {
+          log.warn(
+            "cannot select client, trying again in... ${backoff}ms... (${retries} retries)",
+          );
+
+          await sleep(backoff);
+
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faulTolerantSelectClient(retries + 1, nextBackoff);
+        }
+
+        const text = await response.text();
+
+        throw new Error(`request failed with status code ${status}: ${text}`);
+      }
+
+      const data = await response.json();
+
+      return data as PrometeoAPISelectClientResponse;
+    };
+
+    return await faulTolerantSelectClient();
+  }
+
+  async selectClient(
+    key: string,
+    client: string,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<void> {
+    try {
+      const result = await this.doSelectClient(key, client, config);
+      if (result.status === "success") {
+        return;
+      }
+
+      if (result.message === "Invalid key") {
+        throw ServiceError.sessionKeyInvalidOrExpired;
+      }
+
+      if (result.message === "wrong_client") {
+        throw APIError.notFound(`specified client '${client}' does not exist`);
+      }
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "[internal] error selecting client");
+
+      throw ServiceError.somethingWentWrong;
+    }
+  }
+
+  async doListUserAccountMovements(
+    payload: PrometeoAPIListUserAccountMovementsPayload,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<PrometeoAPIListUserAccountMovementsResponse> {
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const queryParams = new URLSearchParams({
+      key: payload.key,
+      currency: payload.currency,
+      date_start: payload.date_start,
+      date_end: payload.date_end,
+    });
+
+    const url = `${prometeoApiUrl()}/account/${payload.account}/movement/?${queryParams}`;
+    const requestInit = this.getPrometeoRequestInit("GET");
+
+    const faultTolerantListUserAccountMovements = async (
+      retries = 0,
+      backoff = 100,
+    ): Promise<PrometeoAPIListUserAccountMovementsResponse> => {
+      const response = await fetch(url, requestInit);
+
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          log.error(`cannot list user accounts after ${retries} attempts`);
+
+          throw ServiceError.deadlineExceeded;
+        }
+
+        const { status } = response;
+
+        if (status === 502) {
+          log.warn(
+            `cannot list user accounts, trying again in... ${backoff}ms... (${retries} retries)`,
+          );
+
+          await sleep(backoff);
+
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faultTolerantListUserAccountMovements(
+            retries + 1,
+            nextBackoff,
+          );
+        }
+
+        const text = await response.text();
+
+        throw new Error(`request failed with status code ${status}: ${text}`);
+      }
+
+      const data = await response.json();
+
+      return data as PrometeoAPIListUserAccountMovementsResponse;
+    };
+
+    return await faultTolerantListUserAccountMovements();
+  }
+
+  async listUserAccountMovements(
+    payload: PrometeoAPIListUserAccountMovementsPayload,
+    config?: PrometeoRequestConfig,
+  ): Promise<UserBankAccountMovement[]> {
+    try {
+      const result = await this.doListUserAccountMovements(payload, config);
+      if (result.status === "error") {
+        if (result.message === "Invalid key") {
+          throw ServiceError.sessionKeyInvalidOrExpired;
+        }
+
+        log.error("error listing user accounts but cannot be handled");
+
+        throw ServiceError.somethingWentWrong;
+      }
+
+      return result.movements;
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "[internal] error listing user accounts");
+
+      throw ServiceError.somethingWentWrong;
+    }
   }
 }
