@@ -4,7 +4,7 @@ import { APIError } from "encore.dev/api";
 import log from "encore.dev/log";
 import { Redis } from "ioredis";
 
-import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
+import type { IListProvidersItemDto } from "./dtos/list-providers-item.dto";
 import { ServiceError } from "./service-errors";
 import type {
   UserBankAccount,
@@ -25,7 +25,7 @@ import type {
   PrometeoAPIListUserAccountMovementsPayload,
   PrometeoAPIListUserAccountMovementsResponse,
 } from "./types/prometeo-api";
-import type { Supplier } from "./types/supplier";
+import type { Provider } from "./types/provider";
 import type { Client } from "./types/client";
 import { sleep } from "@/lib/thread";
 
@@ -98,7 +98,7 @@ export class PrometeoService {
 
   private async doGetProvidersList(): Promise<{
     status: string;
-    providers: IListSuppliersItemDto[];
+    providers: IListProvidersItemDto[];
   }> {
     const response = await fetch(
       `${prometeoApiUrl()}/provider/`,
@@ -107,12 +107,12 @@ export class PrometeoService {
 
     const data = await response.json();
 
-    return data as { status: string; providers: IListSuppliersItemDto[] };
+    return data as { status: string; providers: IListProvidersItemDto[] };
   }
 
   private async doGetProviderDetails(code: string): Promise<{
     status: string;
-    provider: Supplier;
+    provider: Provider;
   }> {
     const response = await fetch(
       `${prometeoApiUrl()}/provider/${code}/`,
@@ -130,13 +130,13 @@ export class PrometeoService {
 
     const data = await response.json();
 
-    return data as { status: string; provider: Supplier };
+    return data as { status: string; provider: Provider };
   }
 
   private async doGetDetailedProviders(
     countryCode = "PE",
     config?: Partial<PrometeoRequestConfig>,
-  ): Promise<Supplier[]> {
+  ): Promise<Provider[]> {
     const { providers } = await this.doGetProvidersList();
 
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
@@ -145,7 +145,7 @@ export class PrometeoService {
       code: string,
       attempt = 0,
       backoff = 100,
-    ): Promise<Supplier> => {
+    ): Promise<Provider> => {
       try {
         const { provider } = await this.doGetProviderDetails(code);
 
@@ -202,27 +202,27 @@ export class PrometeoService {
     return filteredResults.map((result) => result.value);
   }
 
-  async getSuppliers(
+  async getProviders(
     countryCode = "PE",
     config?: Partial<PrometeoRequestConfig>,
-  ): Promise<Supplier[]> {
-    const key = "prometeo-suppliers";
+  ): Promise<Provider[]> {
+    const key = "prometeo-providers";
 
     const result = await this.cache.get(key);
     if (result) {
-      return JSON.parse(result) as Supplier[];
+      return JSON.parse(result) as Provider[];
     }
 
-    const suppliers = await this.doGetDetailedProviders(countryCode, config);
+    const providers = await this.doGetDetailedProviders(countryCode, config);
 
     try {
-      const value = JSON.stringify(suppliers);
+      const value = JSON.stringify(providers);
       await this.cache.setex(key, 60 * 60 * 12, value);
     } catch (error) {
-      log.warn(error, "error caching Prometeo suppliers in kv database");
+      log.warn(error, "error caching Prometeo providers in kv database");
     }
 
-    return suppliers;
+    return providers;
   }
 
   private async doLogin(
