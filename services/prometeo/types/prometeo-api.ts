@@ -1,10 +1,15 @@
 import type { UserBankAccount, UserBankAccountMovement } from "./user-account";
 
 export interface PrometeoAPILoginRequestBody {
+  // The provider to login to.
   provider: string;
+  // The "access key ID" to use for the login.
   username: string;
+  // The "access key secret" to use for the login.
   password: string;
+  // Optional. The type of account or document (this will vary depending on the provider).
   type?: string;
+  // Optional. The OTP code to use for the login if the provider required it in a previous call.
   otp?: string;
 }
 

@@ -20,42 +20,7 @@ import {
 import type { LoginResponse } from "./types/response";
 import { ServiceError } from "./service-errors";
 
-// If for any reason, the client will store the Prometeo API's session key,
-// the header to pass it is "X-Prometeo-Session-Key"
-
-export const selectClient = api(
-  {
-    expose: true,
-    method: "POST",
-    path: "/third-party/prometeo/select-client",
-  },
-  async (payload: {
-    key: Header<"X-Prometeo-Session-Key">;
-    client: string;
-  }): Promise<void> => {
-    const { prometeoService } = await applicationContext;
-
-    const clients = await prometeoService.getClients({ key: payload.key });
-    if (clients.length === 0) {
-      log.error("no clients found from Prometeo API! returning HTTP 500");
-      throw ServiceError.somethingWentWrong;
-    }
-
-    log.debug(`${clients.length} clients found from Prometeo API...`);
-
-    const validClients = clients.map((c) => c.id);
-
-    const apiError = validateSelectClientPayload(payload, validClients);
-    if (apiError) {
-      log.debug("request failed due to validation error...");
-      throw apiError;
-    }
-
-    await prometeoService.selectClient(payload.key, payload.client);
-  },
-);
-
-// ! restrict access to internal level
+// Login to the specified provider using the Prometeo API.
 export const login = api(
   { expose: true, method: "POST", path: "/third-party/prometeo/auth/login" },
   async (payload: PrometeoAPILoginRequestBody): Promise<LoginResponse> => {
@@ -89,10 +54,14 @@ export const login = api(
   },
 );
 
-// ! restrict access to internal level
+// Exits the session specified in the headers.
 export const logout = api(
   { expose: true, method: "POST", path: "/third-party/prometeo/auth/logout" },
-  async (payload: { key: Header<"X-Prometeo-Session-Key"> }): Promise<{
+  async (payload: {
+    // The session key to be passed to the Prometeo API.
+    key: Header<"X-Prometeo-Session-Key">;
+  }): Promise<{
+    // Whether the logout was successful or not.
     success: boolean;
   }> => {
     const apiError = validateLogoutPayload(payload);
@@ -106,35 +75,27 @@ export const logout = api(
   },
 );
 
-export const listUserAccounts = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/accounts" },
-  async (payload: { key: Header<"X-Prometeo-Session-Key"> }): Promise<{
-    data: UserBankAccount[];
-  }> => {
-    const apiError = validateListUserAccountsPayload(payload);
-    if (apiError) throw apiError;
-
-    const { prometeoService } = await applicationContext;
-
-    const data = await prometeoService.listUserAccounts(payload.key);
-
-    return { data };
-  },
-);
-
-export const listUserAccountMovements = api(
+// Endpoint to query movements of a user account in a given currency and date range.
+export const queryUserAccountMovements = api(
   {
     expose: true,
     method: "GET",
     path: "/third-party/prometeo/accounts/:account/movements",
   },
   async (payload: {
+    // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
+    // The account to query. See '/third-party/prometeo/accounts' to retrieve a list of accounts
+    // in the current provider and/or client.
     account: string;
+    // The currency that the account is denominated in.
     currency: string;
+    // The date in 'dd/mm/yyyy' format from which to start querying movements.
     date_start: string;
+    // The date in 'dd/mm/yyyy' format until which to query movements.
     date_end: string;
   }): Promise<{
+    // An array containing all the movements that the specified account has made in the specified currency.
     data: UserBankAccountMovement[];
   }> => {
     log.debug(
@@ -154,9 +115,13 @@ export const listUserAccountMovements = api(
   },
 );
 
-export const getSuppliers = api(
+// List all the providers that the Prometeo API supports.
+export const listSuppliers = api(
   { expose: true, method: "GET", path: "/third-party/prometeo/suppliers" },
-  async (): Promise<{ data: Supplier[] }> => {
+  async (): Promise<{
+    // An array with all the providers that the Prometeo API supports.
+    data: Supplier[];
+  }> => {
     const { prometeoService } = await applicationContext;
 
     log.debug("retrieving suppliers...");
@@ -169,9 +134,12 @@ export const getSuppliers = api(
   },
 );
 
-export const getClients = api(
+// List all the clients that the current user has access to. Those clients changes
+// depending on the previously specified provider at endpoint to login.
+export const listClients = api(
   { expose: true, method: "GET", path: "/third-party/prometeo/clients" },
   async (payload: {
+    // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
   }): Promise<IGetClientsResponse> => {
     const { prometeoService } = await applicationContext;
@@ -182,5 +150,67 @@ export const getClients = api(
     const data = await prometeoService.getClients(payload);
 
     return { data };
+  },
+);
+
+// List all the accounts that the specified session key has access to.
+// Those accounts will vary depending on the specified provider and/or client.
+export const listUserAccounts = api(
+  { expose: true, method: "GET", path: "/third-party/prometeo/accounts" },
+  async (payload: {
+    // The session key to be passed to the Prometeo API.
+    key: Header<"X-Prometeo-Session-Key">;
+  }): Promise<{
+    // An array containing all the accounts that the specified session key has access to.
+    data: UserBankAccount[];
+  }> => {
+    const apiError = validateListUserAccountsPayload(payload);
+    if (apiError) throw apiError;
+
+    const { prometeoService } = await applicationContext;
+
+    const data = await prometeoService.listUserAccounts(payload.key);
+
+    return { data };
+  },
+);
+
+// Endpoint to specify the client to use for the current session if the
+// provider requires it after login.
+//
+// If the key requires to specify a client, it will keep in standby for
+// some minutes until the client is selected.
+export const selectClient = api(
+  {
+    expose: true,
+    method: "POST",
+    path: "/third-party/prometeo/select-client",
+  },
+  async (payload: {
+    // The session key to be passed to the Prometeo API. This is
+    // a key that is supposed to be waiting for this operation.
+    key: Header<"X-Prometeo-Session-Key">;
+    // The ID of the client to use for the current session.
+    client: string;
+  }): Promise<void> => {
+    const { prometeoService } = await applicationContext;
+
+    const clients = await prometeoService.getClients({ key: payload.key });
+    if (clients.length === 0) {
+      log.error("no clients found from Prometeo API! returning HTTP 500");
+      throw ServiceError.somethingWentWrong;
+    }
+
+    log.debug(`${clients.length} clients found from Prometeo API...`);
+
+    const validClients = clients.map((c) => c.id);
+
+    const apiError = validateSelectClientPayload(payload, validClients);
+    if (apiError) {
+      log.debug("request failed due to validation error...");
+      throw apiError;
+    }
+
+    await prometeoService.selectClient(payload.key, payload.client);
   },
 );
