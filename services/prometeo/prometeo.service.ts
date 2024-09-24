@@ -5,6 +5,7 @@ import log from "encore.dev/log";
 import { Redis } from "ioredis";
 
 import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
+import { ServiceError } from "./service-errors";
 import type { UserBankAccount } from "./types/user-account";
 import type { LoginResponse } from "./types/response";
 import type {
@@ -253,7 +254,7 @@ export class PrometeoService {
         if (retries >= maxAttempts) {
           log.error(`login failed after ${retries} attempts`);
 
-          throw APIError.deadlineExceeded("login failed");
+          throw ServiceError.deadlineExceeded;
         }
 
         const { status } = response;
@@ -291,17 +292,15 @@ export class PrometeoService {
     const result = await this.doLogin(payload, config);
 
     if (result.status === "wrong_credentials") {
-      throw APIError.permissionDenied("wrong credentials");
+      throw ServiceError.wrongCredentials;
     }
 
     if (result.status === "error") {
       if (result.message === "Unauthorized provider") {
-        throw APIError.permissionDenied("unauthorized provider");
+        throw ServiceError.unauthorizedProvider;
       }
       log.warn("unknown API error, we can't return a correct diagnostic");
-      throw APIError.internal(
-        "unexpected error, contact with an administrator",
-      );
+      throw ServiceError.somethingWentWrong;
     }
 
     if (result.status === "logged_in") {
@@ -343,8 +342,9 @@ export class PrometeoService {
     }
 
     log.error("something is off with the Prometeo API .:", result);
+    log.error("cannot complete log-in process...");
 
-    throw APIError.internal("can not complete log-in process");
+    throw ServiceError.somethingWentWrong;
   }
 
   async logout(key: string): Promise<{
@@ -364,7 +364,7 @@ export class PrometeoService {
         "[resilience] maybe we should implement a retry mechanism here...",
       );
 
-      throw APIError.internal("unexpected error");
+      throw ServiceError.somethingWentWrong;
     }
 
     const data = (await response.json()) as PrometeoAPILogoutResponse;
@@ -393,7 +393,7 @@ export class PrometeoService {
         if (retries >= maxAttempts) {
           log.error(`login failed after ${retries} attempts`);
 
-          throw APIError.deadlineExceeded("login failed");
+          throw ServiceError.deadlineExceeded;
         }
 
         const { status } = response;
@@ -425,14 +425,12 @@ export class PrometeoService {
 
     if (result.status === "error") {
       if (result.message === "Invalid key") {
-        throw APIError.permissionDenied(
-          "Prometeo API key is invalid or expired",
-        );
+        throw ServiceError.sessionKeyInvalidOrExpired;
       }
 
       log.error(`Prometeo API error: ${result}`);
 
-      throw APIError.internal("unexpected error");
+      throw ServiceError.somethingWentWrong;
     }
 
     return result;
@@ -448,7 +446,7 @@ export class PrometeoService {
 
       log.error(error, "error listing user accounts");
 
-      throw APIError.unavailable("cannot list user accounts");
+      throw ServiceError.somethingWentWrong;
     }
   }
 
@@ -469,7 +467,9 @@ export class PrometeoService {
       const response = await fetch(url, this.getPrometeoRequestInit("GET"));
       if (!response.ok) {
         if (retries >= maxAttempts) {
-          throw APIError.deadlineExceeded("cannot get clients");
+          log.error(`cannot get clients after ${retries} attempts`);
+
+          throw ServiceError.deadlineExceeded;
         }
 
         if (response.status === 502) {
@@ -518,7 +518,7 @@ export class PrometeoService {
 
       log.error(error, "[internal] error getting clients");
 
-      throw APIError.internal("something went wrong");
+      throw ServiceError.somethingWentWrong;
     }
 
     if (result.status === "error") {
@@ -530,13 +530,13 @@ export class PrometeoService {
           "Prometeo API key is missing or invalid! Modify it in Encore's Dashboard!",
         );
 
-        throw APIError.internal("something went wrong");
+        log.warn("Prometeo API's response was...", result);
+
+        throw ServiceError.somethingWentWrong;
       }
 
       if (result.message === "Invalid key") {
-        throw APIError.permissionDenied(
-          "Prometeo API key is invalid or expired",
-        );
+        throw ServiceError.sessionKeyInvalidOrExpired;
       }
 
       return [];
