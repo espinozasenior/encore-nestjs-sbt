@@ -18,6 +18,7 @@ import type {
   PrometeoAPILoginRequestBody,
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
+  PrometeoAPISelectClientResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import type { Client } from "./types/client";
@@ -557,5 +558,82 @@ export class PrometeoService {
     }
 
     return results;
+  }
+
+  async doSelectClient(
+    key: string,
+    client: string,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<PrometeoAPISelectClientResponse> {
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const url = `${prometeoApiUrl()}/client/${client}/?key=${key}`;
+    const requestInit = this.getPrometeoRequestInit("GET");
+
+    const faulTolerantSelectClient = async (
+      retries = 0,
+      backoff = 200,
+    ): Promise<PrometeoAPISelectClientResponse> => {
+      const response = await fetch(url, requestInit);
+
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          log.error(`cannot select client after ${retries} attempts`);
+
+          throw ServiceError.deadlineExceeded;
+        }
+
+        const { status } = response;
+
+        if (status === 502) {
+          log.warn(
+            "cannot select client, trying again in... ${backoff}ms... (${retries} retries)",
+          );
+
+          await sleep(backoff);
+
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faulTolerantSelectClient(retries + 1, nextBackoff);
+        }
+
+        const text = await response.text();
+
+        throw new Error(`request failed with status code ${status}: ${text}`);
+      }
+
+      const data = await response.json();
+
+      return data as PrometeoAPISelectClientResponse;
+    };
+
+    return await faulTolerantSelectClient();
+  }
+
+  async selectClient(
+    key: string,
+    client: string,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<void> {
+    try {
+      const result = await this.doSelectClient(key, client, config);
+      if (result.status === "success") {
+        return;
+      }
+
+      if (result.message === "Invalid key") {
+        throw ServiceError.sessionKeyInvalidOrExpired;
+      }
+
+      if (result.message === "wrong_client") {
+        throw APIError.notFound(`specified client '${client}' does not exist`);
+      }
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "[internal] error selecting client");
+
+      throw ServiceError.somethingWentWrong;
+    }
   }
 }

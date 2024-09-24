@@ -88,3 +88,20 @@ export const validateLoginPayload = (
 
   // TODO: check 'type' (depends on provider)
 };
+
+export const validateSelectClientPayload = (
+  payload: {
+    key: string;
+    client: string;
+  },
+  validClients: string[],
+): APIError | undefined => {
+  const error = checkPrometeoSessionKey(payload.key);
+  if (error) return error;
+
+  if (!validClients.includes(payload.client)) {
+    return APIError.notFound(
+      `specified client '${payload.client}' does not exist`,
+    );
+  }
+};

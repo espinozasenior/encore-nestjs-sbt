@@ -7,15 +7,49 @@ import type { UserBankAccount } from "./types/user-account";
 import applicationContext from "../applicationContext";
 import type { Supplier } from "./types/supplier";
 import {
-  validateGetClientsPayload,
   validateListUserAccountsPayload,
+  validateSelectClientPayload,
+  validateGetClientsPayload,
   validateLoginPayload,
   validateLogoutPayload,
 } from "./validators/prometeo-api";
 import type { LoginResponse } from "./types/response";
+import { ServiceError } from "./service-errors";
 
 // If for any reason, the client will store the Prometeo API's session key,
 // the header to pass it is "X-Prometeo-Session-Key"
+
+export const selectClient = api(
+  {
+    expose: true,
+    method: "POST",
+    path: "/third-party/prometeo/select-client",
+  },
+  async (payload: {
+    key: Header<"X-Prometeo-Session-Key">;
+    client: string;
+  }): Promise<void> => {
+    const { prometeoService } = await applicationContext;
+
+    const clients = await prometeoService.getClients({ key: payload.key });
+    if (clients.length === 0) {
+      log.error("no clients found from Prometeo API! returning HTTP 500");
+      throw ServiceError.somethingWentWrong;
+    }
+
+    log.debug(`${clients.length} clients found from Prometeo API...`);
+
+    const validClients = clients.map((c) => c.id);
+
+    const apiError = validateSelectClientPayload(payload, validClients);
+    if (apiError) {
+      log.debug("request failed due to validation error...");
+      throw apiError;
+    }
+
+    await prometeoService.selectClient(payload.key, payload.client);
+  },
+);
 
 // ! restrict access to internal level
 export const login = api(
