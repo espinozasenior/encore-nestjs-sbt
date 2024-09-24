@@ -192,7 +192,11 @@ export const selectClient = api(
     key: Header<"X-Prometeo-Session-Key">;
     // The ID of the client to use for the current session.
     client: string;
-  }): Promise<void> => {
+  }): Promise<{
+    // The session key to be passed to the Prometeo API. This key
+    // might change in certain providers so the previous is invalidated.
+    key: string;
+  }> => {
     const { prometeoService } = await applicationContext;
 
     const clients = await prometeoService.getClients({ key: payload.key });
@@ -211,6 +215,11 @@ export const selectClient = api(
       throw apiError;
     }
 
-    await prometeoService.selectClient(payload.key, payload.client);
+    const result = await prometeoService.selectClient(
+      payload.key,
+      payload.client,
+    );
+
+    return result;
   },
 );

@@ -135,6 +135,11 @@ export type PrometeoAPISelectClientResponse =
 
 export interface PrometeoAPISelectClientSuccessfulResponse {
   status: "success";
+  // This key is only present in certian providers. It should
+  // be returned to the client to use for future requests, otherwise
+  // the client can keep using the same session key that used to perform
+  // the request.
+  key?: string;
 }
 
 export interface PrometeoAPISelectClientWrongResponse {
