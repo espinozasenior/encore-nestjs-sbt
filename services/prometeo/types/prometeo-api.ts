@@ -1,4 +1,4 @@
-import type { UserBankAccount } from "./user-account";
+import type { UserBankAccount, UserBankAccountMovement } from "./user-account";
 
 export interface PrometeoAPILoginRequestBody {
   provider: string;
@@ -135,4 +135,21 @@ export interface PrometeoAPISelectClientSuccessfulResponse {
 export interface PrometeoAPISelectClientWrongResponse {
   status: "error";
   message: "wrong_client";
+}
+
+export interface PrometeoAPIListUserAccountMovementsPayload {
+  key: string;
+  account: string;
+  currency: string;
+  date_start: string;
+  date_end: string;
+}
+
+export type PrometeoAPIListUserAccountMovementsResponse =
+  | PrometeoAPIListUserAccountMovementsSuccessfulResponse
+  | PrometeoAPIErrorInvalidKeyResponse;
+
+export interface PrometeoAPIListUserAccountMovementsSuccessfulResponse {
+  status: "success";
+  movements: UserBankAccountMovement[];
 }

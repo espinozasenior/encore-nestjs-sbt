@@ -6,7 +6,10 @@ import { Redis } from "ioredis";
 
 import type { IListSuppliersItemDto } from "./dtos/list-suppliers-item.dto";
 import { ServiceError } from "./service-errors";
-import type { UserBankAccount } from "./types/user-account";
+import type {
+  UserBankAccount,
+  UserBankAccountMovement,
+} from "./types/user-account";
 import type { LoginResponse } from "./types/response";
 import type {
   PrometeoAPISuccessfulListUserAccountsResponse,
@@ -19,6 +22,8 @@ import type {
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
   PrometeoAPISelectClientResponse,
+  PrometeoAPIListUserAccountMovementsPayload,
+  PrometeoAPIListUserAccountMovementsResponse,
 } from "./types/prometeo-api";
 import type { Supplier } from "./types/supplier";
 import type { Client } from "./types/client";
@@ -632,6 +637,91 @@ export class PrometeoService {
       if (error instanceof APIError) throw error;
 
       log.error(error, "[internal] error selecting client");
+
+      throw ServiceError.somethingWentWrong;
+    }
+  }
+
+  async doListUserAccountMovements(
+    payload: PrometeoAPIListUserAccountMovementsPayload,
+    config?: Partial<PrometeoRequestConfig>,
+  ): Promise<PrometeoAPIListUserAccountMovementsResponse> {
+    const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
+
+    const queryParams = new URLSearchParams({
+      key: payload.key,
+      currency: payload.currency,
+      date_start: payload.date_start,
+      date_end: payload.date_end,
+    });
+
+    const url = `${prometeoApiUrl()}/account/${payload.account}/movement/?${queryParams}`;
+    const requestInit = this.getPrometeoRequestInit("GET");
+
+    const faultTolerantListUserAccountMovements = async (
+      retries = 0,
+      backoff = 100,
+    ): Promise<PrometeoAPIListUserAccountMovementsResponse> => {
+      const response = await fetch(url, requestInit);
+
+      if (!response.ok) {
+        if (retries >= maxAttempts) {
+          log.error(`cannot list user accounts after ${retries} attempts`);
+
+          throw ServiceError.deadlineExceeded;
+        }
+
+        const { status } = response;
+
+        if (status === 502) {
+          log.warn(
+            `cannot list user accounts, trying again in... ${backoff}ms... (${retries} retries)`,
+          );
+
+          await sleep(backoff);
+
+          const nextBackoff = Math.min(backoff * 2, maxBackoff);
+
+          return await faultTolerantListUserAccountMovements(
+            retries + 1,
+            nextBackoff,
+          );
+        }
+
+        const text = await response.text();
+
+        throw new Error(`request failed with status code ${status}: ${text}`);
+      }
+
+      const data = await response.json();
+
+      return data as PrometeoAPIListUserAccountMovementsResponse;
+    };
+
+    return await faultTolerantListUserAccountMovements();
+  }
+
+  async listUserAccountMovements(
+    payload: PrometeoAPIListUserAccountMovementsPayload,
+    config?: PrometeoRequestConfig,
+  ): Promise<UserBankAccountMovement[]> {
+    try {
+      const result = await this.doListUserAccountMovements(payload, config);
+      if (result.status === "error") {
+        if (result.message === "Invalid key") {
+          throw ServiceError.sessionKeyInvalidOrExpired;
+        }
+
+        log.error("error listing user accounts but cannot be handled");
+
+        throw ServiceError.somethingWentWrong;
+      }
+
+      return result.movements;
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(error, "[internal] error listing user accounts");
 
       throw ServiceError.somethingWentWrong;
     }

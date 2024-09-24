@@ -3,7 +3,10 @@ import log from "encore.dev/log";
 
 import type { IGetClientsResponse } from "./interfaces/get-clients-response.interface";
 import type { PrometeoAPILoginRequestBody } from "./types/prometeo-api";
-import type { UserBankAccount } from "./types/user-account";
+import type {
+  UserBankAccount,
+  UserBankAccountMovement,
+} from "./types/user-account";
 import applicationContext from "../applicationContext";
 import type { Supplier } from "./types/supplier";
 import {
@@ -12,6 +15,7 @@ import {
   validateGetClientsPayload,
   validateLoginPayload,
   validateLogoutPayload,
+  validateListUserAccountMovementsPayload,
 } from "./validators/prometeo-api";
 import type { LoginResponse } from "./types/response";
 import { ServiceError } from "./service-errors";
@@ -113,6 +117,38 @@ export const listUserAccounts = api(
     const { prometeoService } = await applicationContext;
 
     const data = await prometeoService.listUserAccounts(payload.key);
+
+    return { data };
+  },
+);
+
+export const listUserAccountMovements = api(
+  {
+    expose: true,
+    method: "GET",
+    path: "/third-party/prometeo/accounts/:account/movements",
+  },
+  async (payload: {
+    key: Header<"X-Prometeo-Session-Key">;
+    account: string;
+    currency: string;
+    date_start: string;
+    date_end: string;
+  }): Promise<{
+    data: UserBankAccountMovement[];
+  }> => {
+    log.debug(
+      `retrieving movements from account ${payload.account}(${payload.currency}) from ${payload.date_start} to ${payload.date_end}...`,
+    );
+
+    const apiError = validateListUserAccountMovementsPayload(payload);
+    if (apiError) throw apiError;
+
+    const { prometeoService } = await applicationContext;
+
+    const data = await prometeoService.listUserAccountMovements(payload);
+
+    log.debug(`returning ${data.length} user account movements...`);
 
     return { data };
   },

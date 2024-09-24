@@ -1,7 +1,9 @@
 import { APIError } from "encore.dev/api";
+import { isMatch } from "date-fns";
 
 import type {
   PrometeoAPIGetClientsPayload,
+  PrometeoAPIListUserAccountMovementsPayload,
   PrometeoAPILoginRequestBody,
 } from "../types/prometeo-api";
 
@@ -102,6 +104,41 @@ export const validateSelectClientPayload = (
   if (!validClients.includes(payload.client)) {
     return APIError.notFound(
       `specified client '${payload.client}' does not exist`,
+    );
+  }
+};
+
+export const validateListUserAccountMovementsPayload = (
+  payload: PrometeoAPIListUserAccountMovementsPayload,
+): APIError | undefined => {
+  let error = checkNonEmptyString("currency", payload.currency, 3, 3);
+  if (error) return error;
+
+  const rxISO4217 = /^[A-Z]{3}$/;
+
+  if (!rxISO4217.test(payload.currency)) {
+    return APIError.invalidArgument(
+      `'${payload.currency}' is not a valid ISO 4217 currency code`,
+    );
+  }
+
+  error = checkNonEmptyString("date_start", payload.date_start, 10, 10);
+  if (error) return error;
+
+  const dateFormat = "dd/MM/yyyy";
+
+  if (!isMatch(payload.date_start, dateFormat)) {
+    return APIError.invalidArgument(
+      `'date_start' must be in this format: ${dateFormat}`,
+    );
+  }
+
+  error = checkNonEmptyString("date_end", payload.date_end, 10, 10);
+  if (error) return error;
+
+  if (!isMatch(payload.date_end, dateFormat)) {
+    return APIError.invalidArgument(
+      `'date_end' must be in this format: ${dateFormat}`,
     );
   }
 };
