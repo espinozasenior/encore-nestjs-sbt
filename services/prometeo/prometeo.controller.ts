@@ -137,7 +137,7 @@ export const listProviders = api(
 // List all the clients that the current user has access to. Those clients changes
 // depending on the previously specified provider at endpoint to login.
 export const listClients = api(
-  { expose: true, method: "GET", path: "/third-party/prometeo/clients" },
+  { expose: true, method: "GET", path: "/third-party/prometeo/auth/clients" },
   async (payload: {
     // The session key to be passed to the Prometeo API.
     key: Header<"X-Prometeo-Session-Key">;
@@ -184,7 +184,7 @@ export const selectClient = api(
   {
     expose: true,
     method: "POST",
-    path: "/third-party/prometeo/select-client",
+    path: "/third-party/prometeo/auth/select-client",
   },
   async (payload: {
     // The session key to be passed to the Prometeo API. This is
