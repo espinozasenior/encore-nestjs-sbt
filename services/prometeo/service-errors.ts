@@ -2,7 +2,7 @@ import { APIError } from "encore.dev/api";
 
 export namespace ServiceError {
   export const sessionKeyInvalidOrExpired = APIError.permissionDenied(
-    "Prometeo API' session key is invalid or expired",
+    "Prometeo API's session key is invalid or expired",
   );
 
   export const wrongCredentials =
