@@ -95,13 +95,13 @@ export type PrometeoAPILogoutResponse =
   | PrometeoAPISuccessfulLogoutResponse
   | PrometeoAPIErrorLoginResponse;
 
-export interface PrometeoAPISuccessfulListUserAccountsResponse {
+export interface PrometeoAPISuccessfulListBankAccountsResponse {
   status: "success";
   accounts: UserBankAccount[];
 }
 
-export type PrometeoAPIListUserAccountsResponse =
-  | PrometeoAPISuccessfulListUserAccountsResponse
+export type PrometeoAPIListBankAccountsResponse =
+  | PrometeoAPISuccessfulListBankAccountsResponse
   | PrometeoAPIErrorInvalidKeyResponse;
 
 /**
@@ -147,7 +147,7 @@ export interface PrometeoAPISelectClientWrongResponse {
   message: "wrong_client";
 }
 
-export interface PrometeoAPIListUserAccountMovementsPayload {
+export interface PrometeoAPIListBankAccountMovementsPayload {
   key: string;
   account: string;
   currency: string;
@@ -155,11 +155,11 @@ export interface PrometeoAPIListUserAccountMovementsPayload {
   date_end: string;
 }
 
-export type PrometeoAPIListUserAccountMovementsResponse =
-  | PrometeoAPIListUserAccountMovementsSuccessfulResponse
+export type PrometeoAPIListBankAccountMovementsResponse =
+  | PrometeoAPIListBankAccountMovementsSuccessfulResponse
   | PrometeoAPIErrorInvalidKeyResponse;
 
-export interface PrometeoAPIListUserAccountMovementsSuccessfulResponse {
+export interface PrometeoAPIListBankAccountMovementsSuccessfulResponse {
   status: "success";
   movements: UserBankAccountMovement[];
 }

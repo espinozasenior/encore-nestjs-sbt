@@ -10,12 +10,12 @@ import type {
 import applicationContext from "../applicationContext";
 import type { Provider } from "./types/provider";
 import {
-  validateListUserAccountsPayload,
+  validateListBankAccountMovementsPayload,
+  validateListBankAccountsPayload,
   validateSelectClientPayload,
   validateGetClientsPayload,
   validateLoginPayload,
   validateLogoutPayload,
-  validateListUserAccountMovementsPayload,
 } from "./validators/prometeo-api";
 import type { LoginResponse } from "./types/response";
 import { ServiceError } from "./service-errors";
@@ -76,7 +76,7 @@ export const logout = api(
 );
 
 // Endpoint to query movements of a user account in a given currency and date range.
-export const queryUserAccountMovements = api(
+export const queryBankAccountMovements = api(
   {
     expose: true,
     method: "GET",
@@ -99,15 +99,15 @@ export const queryUserAccountMovements = api(
     data: UserBankAccountMovement[];
   }> => {
     log.debug(
-      `retrieving movements from account ${payload.account}(${payload.currency}) from ${payload.date_start} to ${payload.date_end}...`,
+      `retrieving movements from bank account ${payload.account}(${payload.currency}) from ${payload.date_start} to ${payload.date_end}...`,
     );
 
-    const apiError = validateListUserAccountMovementsPayload(payload);
+    const apiError = validateListBankAccountMovementsPayload(payload);
     if (apiError) throw apiError;
 
     const { prometeoService } = await applicationContext;
 
-    const data = await prometeoService.listUserAccountMovements(payload);
+    const data = await prometeoService.listBankAccountMovements(payload);
 
     log.debug(`returning ${data.length} user account movements...`);
 
@@ -155,7 +155,7 @@ export const listClients = api(
 
 // List all the accounts that the specified session key has access to.
 // Those accounts will vary depending on the specified provider and/or client.
-export const listUserAccounts = api(
+export const listBankAccounts = api(
   { expose: true, method: "GET", path: "/third-party/prometeo/accounts" },
   async (payload: {
     // The session key to be passed to the Prometeo API.
@@ -164,12 +164,12 @@ export const listUserAccounts = api(
     // An array containing all the accounts that the specified session key has access to.
     data: UserBankAccount[];
   }> => {
-    const apiError = validateListUserAccountsPayload(payload);
+    const apiError = validateListBankAccountsPayload(payload);
     if (apiError) throw apiError;
 
     const { prometeoService } = await applicationContext;
 
-    const data = await prometeoService.listUserAccounts(payload.key);
+    const data = await prometeoService.listBankAccounts(payload.key);
 
     return { data };
   },

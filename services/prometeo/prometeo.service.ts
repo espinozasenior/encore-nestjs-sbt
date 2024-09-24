@@ -12,8 +12,8 @@ import type {
 } from "./types/user-account";
 import type { LoginResponse } from "./types/response";
 import type {
-  PrometeoAPISuccessfulListUserAccountsResponse,
-  PrometeoAPIListUserAccountsResponse,
+  PrometeoAPISuccessfulListBankAccountsResponse,
+  PrometeoAPIListBankAccountsResponse,
   PrometeoAPIGetClientsErrorResponse,
   PrometeoAPIErrorLoginResponse,
   PrometeoAPIGetClientsResponse,
@@ -22,8 +22,8 @@ import type {
   PrometeoAPILogoutResponse,
   PrometeoAPILoginResponse,
   PrometeoAPISelectClientResponse,
-  PrometeoAPIListUserAccountMovementsPayload,
-  PrometeoAPIListUserAccountMovementsResponse,
+  PrometeoAPIListBankAccountMovementsPayload,
+  PrometeoAPIListBankAccountMovementsResponse,
 } from "./types/prometeo-api";
 import type { Provider } from "./types/provider";
 import type { Client } from "./types/client";
@@ -380,16 +380,16 @@ export class PrometeoService {
     };
   }
 
-  private async doListUserAccounts(
+  private async doListBankAccounts(
     key: string,
     config?: Partial<PrometeoRequestConfig>,
-  ): Promise<PrometeoAPISuccessfulListUserAccountsResponse> {
+  ): Promise<PrometeoAPISuccessfulListBankAccountsResponse> {
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
     const queryParams = new URLSearchParams({ key });
     const url = `${prometeoApiUrl()}/account/?${queryParams}`;
 
-    const faultTolerantListUserAccounts = async (
+    const faultTolerantListBankAccounts = async (
       retries = 0,
       backoff = 100,
     ) => {
@@ -413,7 +413,7 @@ export class PrometeoService {
 
           const nextBackoff = Math.min(backoff * 2, maxBackoff);
 
-          return await faultTolerantListUserAccounts(retries + 1, nextBackoff);
+          return await faultTolerantListBankAccounts(retries + 1, nextBackoff);
         }
 
         const text = await response.text();
@@ -423,10 +423,10 @@ export class PrometeoService {
 
       const data = await response.json();
 
-      return data as PrometeoAPIListUserAccountsResponse;
+      return data as PrometeoAPIListBankAccountsResponse;
     };
 
-    const result = await faultTolerantListUserAccounts();
+    const result = await faultTolerantListBankAccounts();
     // ! check if the status is "success" as well
 
     if (result.status === "error") {
@@ -442,9 +442,9 @@ export class PrometeoService {
     return result;
   }
 
-  async listUserAccounts(key: string): Promise<UserBankAccount[]> {
+  async listBankAccounts(key: string): Promise<UserBankAccount[]> {
     try {
-      const { accounts } = await this.doListUserAccounts(key);
+      const { accounts } = await this.doListBankAccounts(key);
 
       return accounts;
     } catch (error) {
@@ -650,10 +650,10 @@ export class PrometeoService {
     }
   }
 
-  async doListUserAccountMovements(
-    payload: PrometeoAPIListUserAccountMovementsPayload,
+  async doListBankAccountMovements(
+    payload: PrometeoAPIListBankAccountMovementsPayload,
     config?: Partial<PrometeoRequestConfig>,
-  ): Promise<PrometeoAPIListUserAccountMovementsResponse> {
+  ): Promise<PrometeoAPIListBankAccountMovementsResponse> {
     const { maxBackoff, maxAttempts } = { ...defaultConfig, ...config };
 
     const queryParams = new URLSearchParams({
@@ -666,10 +666,10 @@ export class PrometeoService {
     const url = `${prometeoApiUrl()}/account/${payload.account}/movement/?${queryParams}`;
     const requestInit = this.getPrometeoRequestInit("GET");
 
-    const faultTolerantListUserAccountMovements = async (
+    const faultTolerantListBankAccountMovements = async (
       retries = 0,
       backoff = 100,
-    ): Promise<PrometeoAPIListUserAccountMovementsResponse> => {
+    ): Promise<PrometeoAPIListBankAccountMovementsResponse> => {
       const response = await fetch(url, requestInit);
 
       if (!response.ok) {
@@ -690,7 +690,7 @@ export class PrometeoService {
 
           const nextBackoff = Math.min(backoff * 2, maxBackoff);
 
-          return await faultTolerantListUserAccountMovements(
+          return await faultTolerantListBankAccountMovements(
             retries + 1,
             nextBackoff,
           );
@@ -703,18 +703,18 @@ export class PrometeoService {
 
       const data = await response.json();
 
-      return data as PrometeoAPIListUserAccountMovementsResponse;
+      return data as PrometeoAPIListBankAccountMovementsResponse;
     };
 
-    return await faultTolerantListUserAccountMovements();
+    return await faultTolerantListBankAccountMovements();
   }
 
-  async listUserAccountMovements(
-    payload: PrometeoAPIListUserAccountMovementsPayload,
+  async listBankAccountMovements(
+    payload: PrometeoAPIListBankAccountMovementsPayload,
     config?: PrometeoRequestConfig,
   ): Promise<UserBankAccountMovement[]> {
     try {
-      const result = await this.doListUserAccountMovements(payload, config);
+      const result = await this.doListBankAccountMovements(payload, config);
       if (result.status === "error") {
         if (result.message === "Invalid key") {
           throw ServiceError.sessionKeyInvalidOrExpired;
