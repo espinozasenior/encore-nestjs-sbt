@@ -619,11 +619,15 @@ export class PrometeoService {
     key: string,
     client: string,
     config?: Partial<PrometeoRequestConfig>,
-  ): Promise<void> {
+  ): Promise<{ key: string }> {
     try {
       const result = await this.doSelectClient(key, client, config);
       if (result.status === "success") {
-        return;
+        return {
+          // If the request returns a new key that is passed, otherwise
+          // the same key used to perform the request is returned.
+          key: result.key ?? key,
+        };
       }
 
       if (result.message === "Invalid key") {
@@ -633,6 +637,10 @@ export class PrometeoService {
       if (result.message === "wrong_client") {
         throw APIError.notFound(`specified client '${client}' does not exist`);
       }
+
+      log.error("something is off with the Prometeo API .:", result);
+
+      throw ServiceError.somethingWentWrong;
     } catch (error) {
       if (error instanceof APIError) throw error;
 
