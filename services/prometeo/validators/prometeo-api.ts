@@ -3,7 +3,7 @@ import { isMatch } from "date-fns";
 
 import type {
   PrometeoAPIGetClientsPayload,
-  PrometeoAPIListUserAccountMovementsPayload,
+  PrometeoAPIListBankAccountMovementsPayload,
   PrometeoAPILoginRequestBody,
 } from "../types/prometeo-api";
 
@@ -59,7 +59,7 @@ export const validateLogoutPayload = (payload: { key: string }):
   if (error) return error;
 };
 
-export const validateListUserAccountsPayload = (payload: { key: string }):
+export const validateListBankAccountsPayload = (payload: { key: string }):
   | APIError
   | undefined => {
   const error = checkPrometeoSessionKey(payload.key);
@@ -108,8 +108,8 @@ export const validateSelectClientPayload = (
   }
 };
 
-export const validateListUserAccountMovementsPayload = (
-  payload: PrometeoAPIListUserAccountMovementsPayload,
+export const validateListBankAccountMovementsPayload = (
+  payload: PrometeoAPIListBankAccountMovementsPayload,
 ): APIError | undefined => {
   let error = checkNonEmptyString("currency", payload.currency, 3, 3);
   if (error) return error;
