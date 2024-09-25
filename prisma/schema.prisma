@@ -15,13 +15,14 @@ enum OrganizationRole {
 }
 
 model User {
-  id                              Int                   @id @default(autoincrement())
-  clerkId                         String                @unique @map("clerk_id")
-  onboardedAt                     DateTime?             @map("onboarded_at")
-  acceptTermsAndPrivacyPolicy     Boolean               @map("accept_terms_and_privacy_policy")
-  acknowledgesLegalRepresentation Boolean               @map("acknowledges_legal_representation")
+  id                              Int                           @id @default(autoincrement())
+  clerkId                         String                        @unique @map("clerk_id")
+  onboardedAt                     DateTime?                     @map("onboarded_at")
+  acceptTermsAndPrivacyPolicy     Boolean                       @map("accept_terms_and_privacy_policy")
+  acknowledgesLegalRepresentation Boolean                       @map("acknowledges_legal_representation")
   sunatProfile                    SunatProfile?
   organizationMembers             OrganizationMembers[]
+  prometeoProviderCredentials     PrometeoProviderCredentials[]
 
   @@map("users")
 }
@@ -57,6 +58,16 @@ model SunatProfile {
   user            User   @relation(fields: [userId], references: [id])
 
   @@map("sunat_profiles")
+}
+
+model PrometeoProviderCredentials {
+  id                   Int    @id @default(autoincrement())
+  providerName         String @map("provider_name")
+  encryptedCredentials String @map("encrypted_credentials")
+  userId               Int    @map("user_id")
+  user                 User   @relation(fields: [userId], references: [id])
+
+  @@map("prometeo_provider_credentials")
 }
 
 model schema_migrations {
