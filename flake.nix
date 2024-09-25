@@ -2,10 +2,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/master";
     flake-utils.url = "github:numtide/flake-utils";
-    prisma-utils = {
-      url = "github:VanCoding/nix-prisma-utils";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    prisma-utils.url = "github:VanCoding/nix-prisma-utils";
   };
 
   outputs = {
