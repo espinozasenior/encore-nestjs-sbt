@@ -37,6 +37,10 @@
     "@biomejs/biome"
   ],
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky install",
+    "postinstall": "npx prisma generate",
+    "start:local": "make up ngrok",
+    "prisma:deploy:local": "dotenv -e .env.local -- npx prisma migrate deploy",
+    "prisma:deploy:staging": "dotenv -e .env.staging -- npx prisma migrate deploy"
   }
 }
