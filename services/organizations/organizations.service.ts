@@ -8,6 +8,10 @@ import {
   PrismaClient,
 } from "@prisma/client";
 
+import type { IRubro } from "@/services/sunat/interfaces/rubro.interface";
+import { ServiceError } from "./service-errors";
+import { sunat } from "~encore/clients";
+
 @Injectable()
 export class OrganizationsService extends PrismaClient implements OnModuleInit {
   async onModuleInit() {
@@ -24,6 +28,22 @@ export class OrganizationsService extends PrismaClient implements OnModuleInit {
         },
       },
     });
+  }
+
+  async getAvailableRubroIds(): Promise<string[]> {
+    try {
+      const { rubros }: { rubros: IRubro[] } = await sunat.getRubros();
+
+      return rubros.map((r: IRubro) => r.id);
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(
+        `failed to get rubros to validate 'create organization' payload: ${error}`,
+      );
+
+      throw ServiceError.somethingWentWrong;
+    }
   }
 
   async create(
