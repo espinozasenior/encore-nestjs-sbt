@@ -12,6 +12,8 @@ import {
 } from "./dtos/create-organization.dto";
 import applicationContext from "../applicationContext";
 import { mustGetAuthData } from "@/lib/clerk";
+import log from "encore.dev/log";
+import { ServiceError } from "./service-errors";
 
 const mustGetUserIdFromPublicMetadata = (
   authenticatedUser: AuthenticatedUser,
@@ -31,18 +33,33 @@ export const getOrganizations = api(
   async (): Promise<{
     organizations: SerializableOrganization[];
   }> => {
-    const { organizationsService } = await applicationContext;
-
     const authenticatedUser = mustGetAuthData();
 
-    const userId = mustGetUserIdFromPublicMetadata(authenticatedUser);
-    const organizations = await organizationsService.getAllForUser(userId);
+    log.debug("retrieving all user organizations...");
 
-    return {
-      organizations: organizations.map((organization) =>
-        toSerializableOrganization(organization),
-      ),
-    };
+    const { organizationsService } = await applicationContext;
+
+    const userId = mustGetUserIdFromPublicMetadata(authenticatedUser);
+
+    try {
+      const organizations = await organizationsService.getAllForUser(userId);
+
+      log.debug(`${organizations.length} organizations were retrieved`);
+
+      return {
+        organizations: organizations.map((organization) =>
+          toSerializableOrganization(organization),
+        ),
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(
+        `unhandled error when trying to get user organizations: ${error}`,
+      );
+
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
 
@@ -51,22 +68,37 @@ export const createOrganization = api(
   async (
     payload: ICreateOrganizationDto,
   ): Promise<{ organization: SerializableOrganization }> => {
-    const { organizationsService } = await applicationContext;
-
-    const rubros: string[] = (await sunat.getRubros()).rubros.map(
-      (r: IRubro) => r.id,
-    );
-
-    const errorMessage = checkCreateOrganizationDto(payload, rubros);
-    if (errorMessage) throw APIError.invalidArgument(errorMessage);
-
     const authenticatedUser = mustGetAuthData();
 
-    const userId = mustGetUserIdFromPublicMetadata(authenticatedUser);
-    const organization = await organizationsService.create(userId, payload);
+    log.debug(
+      `user identified with clerk id '${authenticatedUser.userID}' wants to create an organization, payload is... ${payload}`,
+    );
 
-    return {
-      organization: toSerializableOrganization(organization),
-    };
+    const { organizationsService } = await applicationContext;
+
+    const rubroIds = await organizationsService.getAvailableRubroIds();
+
+    const errorMessage = checkCreateOrganizationDto(payload, rubroIds);
+    if (errorMessage) throw APIError.invalidArgument(errorMessage);
+
+    const userId = mustGetUserIdFromPublicMetadata(authenticatedUser);
+
+    try {
+      const organization = await organizationsService.create(userId, payload);
+
+      log.debug(`organization was created... ${organization}`);
+
+      return {
+        organization: toSerializableOrganization(organization),
+      };
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+
+      log.error(
+        `unhandled error when trying to 'create organization': ${error}`,
+      );
+
+      throw ServiceError.somethingWentWrong;
+    }
   },
 );
