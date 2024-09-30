@@ -81,7 +81,11 @@ export const getRubros = api(
   async (): Promise<GetRubrosDto> => {
     const { sunatService } = await applicationContext;
 
+    log.debug("retrieving rubros...");
+
     const rubros = sunatService.getRubros();
+
+    log.debug(`${rubros.length} rubros were retrieved`);
 
     return {
       rubros,
