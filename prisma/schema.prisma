@@ -33,7 +33,7 @@ model Organization {
   name                String                @unique
   category            String
   ruc                 String                @unique
-  size                String                @db.Char(10)
+  size                String                @db.VarChar(10)
   organizationMembers OrganizationMembers[]
 
   @@map("organizations")
