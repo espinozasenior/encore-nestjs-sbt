@@ -148,7 +148,6 @@ export class PrometeoService {
     ): Promise<Provider> => {
       try {
         const { provider } = await this.doGetProviderDetails(code);
-
         if (attempt !== 0) {
           log.debug(
             `successfully got provider details from Prometeo API after ${attempt} attempts (provider code: ${code})`,
@@ -181,7 +180,7 @@ export class PrometeoService {
       providers
         .filter((p) => {
           const isSpecifiedCountry = p.country === countryCode;
-          const isCorp = p.code.includes("corp") || p.code.includes("smes");
+          const isCorp = p.code.includes("corp") || p.code.includes("bcp") || p.code.includes("smes");
 
           return isSpecifiedCountry && isCorp;
         })
@@ -245,6 +244,7 @@ export class PrometeoService {
       bodyParams.append("password", payload.password);
       if (payload.type) bodyParams.append("type", payload.type);
       if (payload.otp) bodyParams.append("otp", payload.otp);
+      if (payload.document_number) bodyParams.append("document_number", payload.document_number);
 
       const response = await fetch(
         `${prometeoApiUrl()}/login/`,
