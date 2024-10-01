@@ -148,7 +148,6 @@ export class PrometeoService {
     ): Promise<Provider> => {
       try {
         const { provider } = await this.doGetProviderDetails(code);
-        console.log('providers ', provider)
         if (attempt !== 0) {
           log.debug(
             `successfully got provider details from Prometeo API after ${attempt} attempts (provider code: ${code})`,
