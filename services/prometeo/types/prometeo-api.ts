@@ -9,6 +9,8 @@ export interface PrometeoAPILoginRequestBody {
   password: string;
   // Optional. The type of account or document (this will vary depending on the provider).
   type?: string;
+  // Optional. The document number (this will vary depending on the provider and account type).
+  document_number?: string;
   // Optional. The OTP code to use for the login if the provider required it in a previous call.
   otp?: string;
 }
